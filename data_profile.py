@@ -7,7 +7,51 @@ DATASET_ID = "ai_wireframe_dataset"
 TABLE_ID = "sales_data"
 
 
+def classify_column(field):
+    """
+    Classify a BigQuery column based on its data type.
+    This is a first-pass heuristic. Later, the LLM can
+    refine the semantic classification.
+    """
+
+    name = field.name.lower()
+    field_type = field.field_type
+
+    # Time-related columns
+    if field_type in ["DATE", "DATETIME", "TIMESTAMP", "TIME"]:
+        return "time_dimension"
+
+    # Numeric columns
+    if field_type in ["INTEGER", "INT64", "FLOAT", "FLOAT64", "NUMERIC", "BIGNUMERIC"]:
+        # Some numeric fields are likely identifiers rather than measures
+        identifier_keywords = [
+            "id",
+            "code",
+            "key"
+        ]
+
+        if any(keyword in name for keyword in identifier_keywords):
+            return "identifier"
+
+        return "measure"
+
+    # Text / categorical fields
+    if field_type in ["STRING"]:
+        # Detect likely identifiers
+        if name.endswith("_id") or name.endswith("id"):
+            return "identifier"
+
+        return "dimension"
+
+    # Boolean fields
+    if field_type == "BOOL":
+        return "dimension"
+
+    return "unknown"
+
+
 def profile_table():
+
     client = bigquery.Client(project=PROJECT_ID)
 
     table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
@@ -15,98 +59,80 @@ def profile_table():
     # Get table metadata
     table = client.get_table(table_ref)
 
-    # Collect column information
+    dimensions = []
+    measures = []
+    time_dimensions = []
+    identifiers = []
     columns = []
 
+    # Classify every column
     for field in table.schema:
-        columns.append({
+
+        role = classify_column(field)
+
+        column_info = {
             "name": field.name,
             "type": field.field_type,
-            "mode": field.mode
-        })
+            "mode": field.mode,
+            "role": role
+        }
 
-    # Get statistics
-    query = f"""
+        columns.append(column_info)
+
+        if role == "dimension":
+            dimensions.append(field.name)
+
+        elif role == "measure":
+            measures.append(field.name)
+
+        elif role == "time_dimension":
+            time_dimensions.append(field.name)
+
+        elif role == "identifier":
+            identifiers.append(field.name)
+
+    # Build dynamic SQL for basic data-quality information
+    null_expressions = []
+
+    for field in table.schema:
+        null_expressions.append(
+            f"COUNTIF(`{field.name}` IS NULL) AS `{field.name}_nulls`"
+        )
+
+    null_query = f"""
         SELECT
             COUNT(*) AS total_rows,
-
-            COUNTIF(Date IS NULL) AS null_date,
-            COUNTIF(Region IS NULL) AS null_region,
-            COUNTIF(Product IS NULL) AS null_product,
-            COUNTIF(Revenue IS NULL) AS null_revenue,
-            COUNTIF(Cost IS NULL) AS null_cost,
-            COUNTIF(Units IS NULL) AS null_units,
-            COUNTIF(Gross_Margin IS NULL) AS null_gross_margin,
-
-            COUNT(DISTINCT Region) AS unique_regions,
-            COUNT(DISTINCT Product) AS unique_products,
-
-            MIN(Date) AS min_date,
-            MAX(Date) AS max_date,
-
-            MIN(Revenue) AS min_revenue,
-            MAX(Revenue) AS max_revenue,
-            AVG(Revenue) AS avg_revenue,
-
-            MIN(Cost) AS min_cost,
-            MAX(Cost) AS max_cost,
-            AVG(Cost) AS avg_cost,
-
-            MIN(Units) AS min_units,
-            MAX(Units) AS max_units,
-            AVG(Units) AS avg_units
-
+            {", ".join(null_expressions)}
         FROM `{table_ref}`
     """
 
-    result = client.query(query).result()
+    result = client.query(null_query).result()
     row = next(result)
 
-    # Build structured profile
+    null_values = {}
+
+    for field in table.schema:
+        null_values[field.name] = getattr(
+            row,
+            f"{field.name}_nulls"
+        )
+
+    # Build final profile
     profile = {
         "table": table_ref,
-        "rows": table.num_rows,
+        "row_count": table.num_rows,
 
         "columns": columns,
 
-        "statistics": {
-            "null_values": {
-                "Date": row.null_date,
-                "Region": row.null_region,
-                "Product": row.null_product,
-                "Revenue": row.null_revenue,
-                "Cost": row.null_cost,
-                "Units": row.null_units,
-                "Gross_Margin": row.null_gross_margin
-            },
+        "semantic_structure": {
+            "time_dimensions": time_dimensions,
+            "dimensions": dimensions,
+            "measures": measures,
+            "identifiers": identifiers
+        },
 
-            "unique_values": {
-                "regions": row.unique_regions,
-                "products": row.unique_products
-            },
-
-            "date_range": {
-                "min": str(row.min_date),
-                "max": str(row.max_date)
-            },
-
-            "revenue": {
-                "min": row.min_revenue,
-                "max": row.max_revenue,
-                "average": float(row.avg_revenue)
-            },
-
-            "cost": {
-                "min": row.min_cost,
-                "max": row.max_cost,
-                "average": float(row.avg_cost)
-            },
-
-            "units": {
-                "min": row.min_units,
-                "max": row.max_units,
-                "average": float(row.avg_units)
-            }
+        "data_quality": {
+            "null_values": null_values
         }
     }
 
@@ -114,6 +140,12 @@ def profile_table():
 
 
 if __name__ == "__main__":
+
     profile = profile_table()
 
-    print(json.dumps(profile, indent=2))
+    print(
+        json.dumps(
+            profile,
+            indent=2
+        )
+    )
