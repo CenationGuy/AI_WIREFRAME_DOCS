@@ -1,0 +1,14 @@
+{
+  "project": "AI Dashboard Generator - Test Version",
+  "persona": "Data Analyst",
+  "tool": "Power BI",
+  "input_csv": "sales_dashboard_test.csv",
+  "standard_image": "standard_dashboard.png",
+  "guidelines": "dashboard_standard_guidelines.pdf",
+  "expected_outputs": [
+    "dashboard_specification.json",
+    "dashboard_specification.pdf",
+    "technical_documentation.pdf",
+    "validation_report.json"
+  ]
+}
