@@ -1,4 +1,5 @@
 from google.cloud import bigquery
+import json
 
 
 PROJECT_ID = "vf-grp-gbissdbx-dev-1"
@@ -14,19 +15,17 @@ def profile_table():
     # Get table metadata
     table = client.get_table(table_ref)
 
-    print("\n==============================")
-    print("DATASET PROFILE")
-    print("==============================")
-
-    print(f"Table: {table_ref}")
-    print(f"Rows: {table.num_rows}")
-
-    print("\nColumns:")
+    # Collect column information
+    columns = []
 
     for field in table.schema:
-        print(f"- {field.name}: {field.field_type}")
+        columns.append({
+            "name": field.name,
+            "type": field.field_type,
+            "mode": field.mode
+        })
 
-    # Get column statistics
+    # Get statistics
     query = f"""
         SELECT
             COUNT(*) AS total_rows,
@@ -63,44 +62,58 @@ def profile_table():
     result = client.query(query).result()
     row = next(result)
 
-    print("\n==============================")
-    print("STATISTICS")
-    print("==============================")
+    # Build structured profile
+    profile = {
+        "table": table_ref,
+        "rows": table.num_rows,
 
-    print(f"Total rows: {row.total_rows}")
+        "columns": columns,
 
-    print("\nNull values:")
-    print(f"Date: {row.null_date}")
-    print(f"Region: {row.null_region}")
-    print(f"Product: {row.null_product}")
-    print(f"Revenue: {row.null_revenue}")
-    print(f"Cost: {row.null_cost}")
-    print(f"Units: {row.null_units}")
-    print(f"Gross Margin: {row.null_gross_margin}")
+        "statistics": {
+            "null_values": {
+                "Date": row.null_date,
+                "Region": row.null_region,
+                "Product": row.null_product,
+                "Revenue": row.null_revenue,
+                "Cost": row.null_cost,
+                "Units": row.null_units,
+                "Gross_Margin": row.null_gross_margin
+            },
 
-    print("\nUnique values:")
-    print(f"Regions: {row.unique_regions}")
-    print(f"Products: {row.unique_products}")
+            "unique_values": {
+                "regions": row.unique_regions,
+                "products": row.unique_products
+            },
 
-    print("\nDate range:")
-    print(f"From: {row.min_date}")
-    print(f"To: {row.max_date}")
+            "date_range": {
+                "min": str(row.min_date),
+                "max": str(row.max_date)
+            },
 
-    print("\nRevenue:")
-    print(f"Min: {row.min_revenue}")
-    print(f"Max: {row.max_revenue}")
-    print(f"Average: {row.avg_revenue:.2f}")
+            "revenue": {
+                "min": row.min_revenue,
+                "max": row.max_revenue,
+                "average": float(row.avg_revenue)
+            },
 
-    print("\nCost:")
-    print(f"Min: {row.min_cost}")
-    print(f"Max: {row.max_cost}")
-    print(f"Average: {row.avg_cost:.2f}")
+            "cost": {
+                "min": row.min_cost,
+                "max": row.max_cost,
+                "average": float(row.avg_cost)
+            },
 
-    print("\nUnits:")
-    print(f"Min: {row.min_units}")
-    print(f"Max: {row.max_units}")
-    print(f"Average: {row.avg_units:.2f}")
+            "units": {
+                "min": row.min_units,
+                "max": row.max_units,
+                "average": float(row.avg_units)
+            }
+        }
+    }
+
+    return profile
 
 
 if __name__ == "__main__":
-    profile_table()
+    profile = profile_table()
+
+    print(json.dumps(profile, indent=2))
