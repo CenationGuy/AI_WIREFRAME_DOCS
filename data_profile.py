@@ -299,6 +299,9 @@ python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-
              ^^^^^^^^
   File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/_http/__init__.py", line 494, in api_request
     raise exceptions.from_http_response(response)
+
+
+nl -ba data_profile.py | sed -n '1,50p'
 google.api_core.exceptions.BadRequest: 400 POST https://bigquery.googleapis.com/bigquery/v2/projects/vf-grp-gbissdbx-dev/jobs?prettyPrint=false: ProjectId must be non-empty
 
 Location: None
