@@ -255,3 +255,4 @@ print(f"\nStructured JSON saved to: {OUTPUT_FILE}")
 
 
 python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-gbissdbx-dev-1'); print('Client project:', c.project); print(c.query('SELECT 1 AS test').result().to_dataframe())"
+python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-gbissdbx-dev-1'); t=c.get_table('vf-grp-gbissdbx-dev-1.ai_wireframe_dataset.sales_data'); print('TABLE:', t.full_table_id); print('ROWS:', t.num_rows)"
