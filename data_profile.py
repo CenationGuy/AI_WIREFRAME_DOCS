@@ -256,3 +256,50 @@ print(f"\nStructured JSON saved to: {OUTPUT_FILE}")
 
 python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-gbissdbx-dev-1'); print('Client project:', c.project); print(c.query('SELECT 1 AS test').result().to_dataframe())"
 python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-gbissdbx-dev-1'); t=c.get_table('vf-grp-gbissdbx-dev-1.ai_wireframe_dataset.sales_data'); print('TABLE:', t.full_table_id); print('ROWS:', t.num_rows)"
+ File "/home/abhisheks_s/ai_wireframe/backend/data_profile.py", line 36, in <module>
+    df = client.query(query).to_dataframe()
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/client.py", line 3624, in query
+    return _job_helpers.query_jobs_insert(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/_job_helpers.py", line 205, in query_jobs_insert
+    future = do_query()
+             ^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 148, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/_job_helpers.py", line 151, in do_query
+    query_job._begin(retry=retry, timeout=timeout)
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/job/query.py", line 1489, in _begin
+    super(QueryJob, self)._begin(client=client, retry=retry, timeout=timeout)
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/job/base.py", line 825, in _begin
+    api_response = client._call_api(
+                   ^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/client.py", line 895, in _call_api
+    return call()
+           ^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 295, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 157, in retry_target
+    next_sleep = _retry_error_helper(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_base.py", line 215, in _retry_error_helper
+    raise final_exc from source_exc
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 148, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/_http/__init__.py", line 494, in api_request
+    raise exceptions.from_http_response(response)
+google.api_core.exceptions.BadRequest: 400 POST https://bigquery.googleapis.com/bigquery/v2/projects/vf-grp-gbissdbx-dev/jobs?prettyPrint=false: ProjectId must be non-empty
+
+Location: None
+Job ID: 0ac41a82-c613-4e14-9ff3-83042634b431
