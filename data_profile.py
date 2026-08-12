@@ -248,3 +248,10 @@ for item in measures:
     print(f"  - {item}")
 
 print(f"\nStructured JSON saved to: {OUTPUT_FILE}")
+
+
+
+
+
+
+python -c "from google.cloud import bigquery; c=bigquery.Client(project='vf-grp-gbissdbx-dev-1'); print('Client project:', c.project); print(c.query('SELECT 1 AS test').result().to_dataframe())"
