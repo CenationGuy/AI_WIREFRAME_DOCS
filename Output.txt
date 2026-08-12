@@ -1,0 +1,246 @@
+{
+  "dataset": {
+    "project": "vf-grp-gbissdbx-dev-1",
+    "dataset": "ai_wireframe_dataset",
+    "table": "sales_data",
+    "table_reference": "vf-grp-gbissdbx-dev-1.ai_wireframe_dataset.sales_data"
+  },
+  "summary": {
+    "row_count": 72,
+    "column_count": 7
+  },
+  "dimensions": [
+    "Date",
+    "Region",
+    "Product"
+  ],
+  "date_dimensions": [
+    "Date"
+  ],
+  "measures": [
+    "Revenue",
+    "Cost",
+    "Units",
+    "Gross_Margin"
+  ],
+  "columns": {
+    "Date": {
+      "name": "Date",
+      "type": "DATE",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 6,
+      "date_range": {
+        "min": "2026-01-01",
+        "max": "2026-06-01"
+      }
+    },
+    "Region": {
+      "name": "Region",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 4,
+      "top_values": {
+        "North": 18,
+        "South": 18,
+        "East": 18,
+        "West": 18
+      }
+    },
+    "Product": {
+      "name": "Product",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 3,
+      "top_values": {
+        "Alpha": 24,
+        "Beta": 24,
+        "Gamma": 24
+      }
+    },
+    "Revenue": {
+      "name": "Revenue",
+      "type": "INTEGER",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 72,
+      "statistics": {
+        "min": 18189,
+        "max": 64645,
+        "mean": 38962.63888888889,
+        "sum": 2805310
+      }
+    },
+    "Cost": {
+      "name": "Cost",
+      "type": "INTEGER",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 72,
+      "statistics": {
+        "min": 10382,
+        "max": 44554,
+        "mean": 25872.305555555555,
+        "sum": 1862806
+      }
+    },
+    "Units": {
+      "name": "Units",
+      "type": "INTEGER",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 69,
+      "statistics": {
+        "min": 81,
+        "max": 417,
+        "mean": 251.66666666666666,
+        "sum": 18120
+      }
+    },
+    "Gross_Margin": {
+      "name": "Gross_Margin",
+      "type": "INTEGER",
+      "mode": "NULLABLE",
+      "description": null,
+      "null_count": 0,
+      "distinct_count": 72,
+      "statistics": {
+        "min": 4351,
+        "max": 28599,
+        "mean": 13090.333333333334,
+        "sum": 942504
+      }
+    }
+  },
+  "sample_rows": [
+    {
+      "Date": "2026-01-01",
+      "Region": "North",
+      "Product": "Alpha",
+      "Revenue": 33795,
+      "Cost": 25977,
+      "Units": 186,
+      "Gross_Margin": 7818
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "North",
+      "Product": "Beta",
+      "Revenue": 62732,
+      "Cost": 43114,
+      "Units": 201,
+      "Gross_Margin": 19618
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "North",
+      "Product": "Gamma",
+      "Revenue": 34850,
+      "Cost": 19968,
+      "Units": 167,
+      "Gross_Margin": 14882
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "South",
+      "Product": "Alpha",
+      "Revenue": 62131,
+      "Cost": 36213,
+      "Units": 210,
+      "Gross_Margin": 25918
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "South",
+      "Product": "Beta",
+      "Revenue": 19685,
+      "Cost": 11082,
+      "Units": 373,
+      "Gross_Margin": 8603
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "South",
+      "Product": "Gamma",
+      "Revenue": 20433,
+      "Cost": 12092,
+      "Units": 356,
+      "Gross_Margin": 8341
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "East",
+      "Product": "Alpha",
+      "Revenue": 35568,
+      "Cost": 22051,
+      "Units": 101,
+      "Gross_Margin": 13517
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "East",
+      "Product": "Beta",
+      "Revenue": 24396,
+      "Cost": 15841,
+      "Units": 128,
+      "Gross_Margin": 8555
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "East",
+      "Product": "Gamma",
+      "Revenue": 59434,
+      "Cost": 41052,
+      "Units": 249,
+      "Gross_Margin": 18382
+    },
+    {
+      "Date": "2026-01-01",
+      "Region": "West",
+      "Product": "Alpha",
+      "Revenue": 36431,
+      "Cost": 22484,
+      "Units": 350,
+      "Gross_Margin": 13947
+    }
+  ]
+}
+
+
+
+
+python data_profile.py 
+/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/cloud/bigquery/table.py:2082: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.
+  warnings.warn(
+============================================================
+DATA PROFILE GENERATED SUCCESSFULLY
+============================================================
+Project: vf-grp-gbissdbx-dev-1
+Dataset: ai_wireframe_dataset
+Table: sales_data
+Rows: 72
+Columns: 7
+
+Dimensions:
+  - Date
+  - Region
+  - Product
+
+Date dimensions:
+  - Date
+
+Measures:
+  - Revenue
+  - Cost
+  - Units
+  - Gross_Margin
+
+Structured JSON saved to: data_profile.json
