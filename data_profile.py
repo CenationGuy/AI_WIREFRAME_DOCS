@@ -306,3 +306,58 @@ google.api_core.exceptions.BadRequest: 400 POST https://bigquery.googleapis.com/
 
 Location: None
 Job ID: 0ac41a82-c613-4e14-9ff3-83042634b431
+
+
+
+
+
+1  from google.cloud import bigquery
+     2  import json
+     3  from datetime import date, datetime
+     4  from decimal import Decimal
+     5
+     6
+     7  # ---------------------------------------------------------
+     8  # Configuration
+     9  # ---------------------------------------------------------
+    10
+    11  PROJECT_ID = "vf-grp-gbissdbx-dev"
+    12  DATASET_ID = "ai_wireframe_dataset"
+    13  TABLE_ID = "sales_data"
+    14
+    15  OUTPUT_FILE = "data_profile.json"
+    16
+    17
+    18  # ---------------------------------------------------------
+    19  # BigQuery client
+    20  # ---------------------------------------------------------
+    21
+    22  client = bigquery.Client(project=PROJECT_ID)
+    23
+    24  table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+    25
+    26
+    27  # ---------------------------------------------------------
+    28  # Load table
+    29  # ---------------------------------------------------------
+    30
+    31  query = f"""
+    32  SELECT *
+    33  FROM `{table_ref}`
+    34  """
+    35
+    36  df = client.query(query).to_dataframe()
+    37
+    38
+    39  # ---------------------------------------------------------
+    40  # Helper for JSON serialization
+    41  # ---------------------------------------------------------
+    42
+    43  def json_safe(value):
+    44      if isinstance(value, (date, datetime)):
+    45          return value.isoformat()
+    46
+    47      if isinstance(value, Decimal):
+    48          return float(value)
+    49
+    50      return value
