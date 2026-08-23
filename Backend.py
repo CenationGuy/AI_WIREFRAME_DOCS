@@ -5,14 +5,19 @@ import pandas as pd
 import io
 
 
+# ==================================================
+# FASTAPI APP
+# ==================================================
+
 app = FastAPI(
     title="AI Wireframe API"
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # CORS
-# --------------------------------------------------
+# Allows React frontend to communicate with FastAPI
+# ==================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,37 +28,59 @@ app.add_middleware(
 )
 
 
-# --------------------------------------------------
-# HOME
-# --------------------------------------------------
+# ==================================================
+# HOME ENDPOINT
+# ==================================================
 
 @app.get("/")
 def home():
+
     return {
         "message": "AI Wireframe Backend is running"
     }
 
 
-# --------------------------------------------------
+# ==================================================
 # GENERATE DASHBOARD
-# --------------------------------------------------
+#
+# CURRENT STEP:
+#
+# React / Swagger
+#        ↓
+# Upload CSV
+#        ↓
+# FastAPI receives CSV
+#        ↓
+# Pandas reads CSV
+#        ↓
+# Convert NaN → None
+#        ↓
+# Return JSON-safe preview
+# ==================================================
 
 @app.post("/generate-dashboard")
 async def generate_dashboard(
     file: UploadFile = File(...)
 ):
 
-    # Check file type
-    if not file.filename.endswith(".csv"):
+    # ----------------------------------------------
+    # CHECK FILE TYPE
+    # ----------------------------------------------
+
+    if not file.filename.lower().endswith(".csv"):
 
         raise HTTPException(
             status_code=400,
             detail="Please upload a CSV file."
         )
 
+
     try:
 
-        # Read uploaded CSV
+        # ------------------------------------------
+        # READ UPLOADED FILE
+        # ------------------------------------------
+
         contents = await file.read()
 
         df = pd.read_csv(
@@ -61,20 +88,51 @@ async def generate_dashboard(
         )
 
 
-        # ----------------------------------------------
-        # Convert NaN values to None
-        #
-        # JSON understands None as null
-        # but does not accept NaN
-        # ----------------------------------------------
+        # ------------------------------------------
+        # CREATE PREVIEW
+        # ------------------------------------------
 
-        preview_df = (
-            df.head(5)
-            .where(pd.notnull(df.head(5)), None)
+        preview_df = df.head(5).copy()
+
+
+        # ------------------------------------------
+        # CONVERT DATAFRAME TO OBJECT TYPE
+        #
+        # This allows us to replace NaN with None
+        # ------------------------------------------
+
+        preview_df = preview_df.astype(object)
+
+
+        # ------------------------------------------
+        # REPLACE NaN WITH None
+        #
+        # JSON understands:
+        # None → null
+        #
+        # JSON does NOT understand:
+        # NaN
+        # ------------------------------------------
+
+        preview_df = preview_df.where(
+            pd.notnull(preview_df),
+            None
         )
 
 
-        # Return JSON-safe response
+        # ------------------------------------------
+        # CONVERT TO PYTHON DICTIONARY
+        # ------------------------------------------
+
+        preview = preview_df.to_dict(
+            orient="records"
+        )
+
+
+        # ------------------------------------------
+        # RETURN JSON RESPONSE
+        # ------------------------------------------
+
         return {
 
             "status": "success",
@@ -83,13 +141,11 @@ async def generate_dashboard(
 
             "filename": file.filename,
 
-            "rows": len(df),
+            "rows": int(len(df)),
 
             "columns": list(df.columns),
 
-            "preview": preview_df.to_dict(
-                orient="records"
-            )
+            "preview": preview
 
         }
 
