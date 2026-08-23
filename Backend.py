@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
 
+# Import our new CSV profiler
+from csv_profiler import profile_csv_dataframe
+
 
 # ==================================================
 # FASTAPI APP
@@ -43,19 +46,17 @@ def home():
 # ==================================================
 # GENERATE DASHBOARD
 #
-# CURRENT STEP:
+# CURRENT FLOW:
 #
-# React / Swagger
-#        ↓
 # Upload CSV
-#        ↓
+#      ↓
 # FastAPI receives CSV
-#        ↓
+#      ↓
 # Pandas reads CSV
-#        ↓
-# Convert NaN → None
-#        ↓
-# Return JSON-safe preview
+#      ↓
+# csv_profiler.py analyzes DataFrame
+#      ↓
+# Return Data Profile
 # ==================================================
 
 @app.post("/generate-dashboard")
@@ -78,7 +79,7 @@ async def generate_dashboard(
     try:
 
         # ------------------------------------------
-        # READ UPLOADED FILE
+        # READ UPLOADED CSV
         # ------------------------------------------
 
         contents = await file.read()
@@ -89,63 +90,28 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # CREATE PREVIEW
-        # ------------------------------------------
-
-        preview_df = df.head(5).copy()
-
-
-        # ------------------------------------------
-        # CONVERT DATAFRAME TO OBJECT TYPE
+        # PROFILE THE CSV
         #
-        # This allows us to replace NaN with None
+        # We pass the Pandas DataFrame to our
+        # csv_profiler.py
         # ------------------------------------------
 
-        preview_df = preview_df.astype(object)
-
-
-        # ------------------------------------------
-        # REPLACE NaN WITH None
-        #
-        # JSON understands:
-        # None → null
-        #
-        # JSON does NOT understand:
-        # NaN
-        # ------------------------------------------
-
-        preview_df = preview_df.where(
-            pd.notnull(preview_df),
-            None
-        )
+        data_profile = profile_csv_dataframe(df)
 
 
         # ------------------------------------------
-        # CONVERT TO PYTHON DICTIONARY
-        # ------------------------------------------
-
-        preview = preview_df.to_dict(
-            orient="records"
-        )
-
-
-        # ------------------------------------------
-        # RETURN JSON RESPONSE
+        # RETURN RESULT
         # ------------------------------------------
 
         return {
 
             "status": "success",
 
-            "message": "CSV uploaded successfully",
+            "message": "CSV profiled successfully",
 
             "filename": file.filename,
 
-            "rows": int(len(df)),
-
-            "columns": list(df.columns),
-
-            "preview": preview
+            "data_profile": data_profile
 
         }
 
