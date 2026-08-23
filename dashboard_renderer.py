@@ -138,3 +138,81 @@ for filter_name in dashboard_spec["filters"]:
 print("\n========================================================")
 print("READY FOR DASHBOARD RENDERING")
 print("========================================================")
+
+
+
+# =========================================================
+# CALCULATE KPIs
+# =========================================================
+
+print("\n========================================================")
+print("CALCULATING KPIs")
+print("========================================================\n")
+
+kpi_results = []
+
+for kpi in dashboard_spec["kpis"]:
+
+    kpi_title = kpi["title"]
+    field = kpi["field"]
+    aggregation = kpi["aggregation"]
+
+    # ---------------------------------------------
+    # Perform aggregation dynamically
+    # ---------------------------------------------
+
+    if aggregation == "sum":
+        value = df[field].sum()
+
+    elif aggregation == "mean":
+        value = df[field].mean()
+
+    elif aggregation == "min":
+        value = df[field].min()
+
+    elif aggregation == "max":
+        value = df[field].max()
+
+    elif aggregation == "count":
+        value = df[field].count()
+
+    else:
+        print(
+            f"Unsupported aggregation: {aggregation}"
+        )
+        value = None
+
+
+    # ---------------------------------------------
+    # Store KPI result
+    # ---------------------------------------------
+
+    kpi_result = {
+        "title": kpi_title,
+        "field": field,
+        "aggregation": aggregation,
+        "value": float(value) if value is not None else None
+    }
+
+    kpi_results.append(kpi_result)
+
+
+    # ---------------------------------------------
+    # Print result
+    # ---------------------------------------------
+
+    print(f"{kpi_title}: {value}")
+
+
+# =========================================================
+# FINAL KPI RESULTS
+# =========================================================
+
+print("\n========================================================")
+print("KPI CALCULATION COMPLETE")
+print("========================================================\n")
+
+print(json.dumps(
+    kpi_results,
+    indent=4
+))
