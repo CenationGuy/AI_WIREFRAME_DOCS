@@ -216,3 +216,92 @@ print(json.dumps(
     kpi_results,
     indent=4
 ))
+
+
+
+
+
+
+# =========================================================
+# GENERATE CHARTS
+# =========================================================
+
+print("\n========================================================")
+print("GENERATING CHARTS")
+print("========================================================")
+
+for index, chart in enumerate(dashboard_spec["charts"]):
+
+    chart_title = chart["title"]
+    chart_type = chart["type"]
+    x_axis = chart["x_axis"]
+    y_axis = chart["y_axis"]
+
+    print(f"\nCreating: {chart_title}")
+
+    # ---------------------------------------------
+    # GROUP DATA
+    # ---------------------------------------------
+
+    chart_data = (
+        df.groupby(x_axis)[y_axis]
+        .sum()
+        .reset_index()
+    )
+
+    # ---------------------------------------------
+    # CREATE CHART
+    # ---------------------------------------------
+
+    plt.figure(figsize=(10, 6))
+
+    if chart_type == "line":
+
+        plt.plot(
+            chart_data[x_axis],
+            chart_data[y_axis],
+            marker="o"
+        )
+
+    elif chart_type == "bar":
+
+        plt.bar(
+            chart_data[x_axis].astype(str),
+            chart_data[y_axis]
+        )
+
+    else:
+
+        print(f"Unsupported chart type: {chart_type}")
+        continue
+
+    # ---------------------------------------------
+    # CHART FORMATTING
+    # ---------------------------------------------
+
+    plt.title(chart_title)
+
+    plt.xlabel(x_axis)
+
+    plt.ylabel(y_axis)
+
+    plt.xticks(rotation=45)
+
+    plt.tight_layout()
+
+    # ---------------------------------------------
+    # SAVE CHART
+    # ---------------------------------------------
+
+    filename = f"chart_{index + 1}.png"
+
+    plt.savefig(filename)
+
+    plt.close()
+
+    print(f"Saved: {filename}")
+
+
+print("\n========================================================")
+print("CHART GENERATION COMPLETE")
+print("========================================================")
