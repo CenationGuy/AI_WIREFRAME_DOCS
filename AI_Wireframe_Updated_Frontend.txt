@@ -1,0 +1,584 @@
+==================================================================
+ AI_WIREFRAME — REACT FRONTEND (single-file bundle)
+==================================================================
+
+Copy each file below into the path shown in its "FILE:" banner.
+Vodafone red is inline as bg-[#E60000] — no color config needed.
+Data + mock generate are folded into the components — no api/hooks/data.
+
+------------------------------------------------------------------
+ PREREQUISITES
+------------------------------------------------------------------
+Node 18+  (check: node -v)
+
+------------------------------------------------------------------
+ ONE-TIME SETUP  (run inside your ai_wireframe folder)
+------------------------------------------------------------------
+cd ai_wireframe
+
+# scaffold Vite React IN THIS folder (choose "Ignore files and continue" if asked)
+npm create vite@latest . -- --template react
+
+npm install
+npm install lucide-react recharts
+npm install -D tailwindcss@3 postcss autoprefixer
+
+mkdir -p src/components
+
+Then:
+  - Create tailwind.config.js and postcss.config.js at the project root (below).
+  - REPLACE the generated src/index.css and src/App.jsx with the versions below.
+  - KEEP the generated src/main.jsx (it already renders <App/> and imports index.css).
+  - DELETE src/App.css (we don't use it).
+  - Create the 6 files under src/components/.
+  - (Optional) add the Figtree font <link> to index.html <head> — see note at bottom.
+
+Run it:
+  npm run dev        ->  http://localhost:5173
+
+The Generate button uses mock data, so the whole UI works with no backend.
+
+
+==================================================================
+ FILE: tailwind.config.js          (project root)
+==================================================================
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+
+
+==================================================================
+ FILE: postcss.config.js           (project root)
+==================================================================
+export default {
+  plugins: { tailwindcss: {}, autoprefixer: {} },
+};
+
+
+==================================================================
+ FILE: src/index.css               (REPLACE generated file)
+==================================================================
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: 'Figtree', system-ui, -apple-system, sans-serif; }
+
+
+==================================================================
+ FILE: src/App.jsx                 (REPLACE generated file)
+==================================================================
+import { useState } from "react";
+import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import GeneratorForm from "./components/GeneratorForm.jsx";
+import PreviewPanel from "./components/PreviewPanel.jsx";
+
+const INITIAL_SESSIONS = [
+  { id: 1, title: "Q2 sales overview", market: "DE", when: "Today" },
+  { id: 2, title: "Retail footfall by store", market: "UK", when: "Today" },
+  { id: 3, title: "Churn drivers — enterprise", market: "APAC", when: "Yesterday" },
+  { id: 4, title: "Marketing spend vs pipeline", market: "US", when: "Yesterday" },
+  { id: 5, title: "Inventory turns by category", market: "DE", when: "Previous 7 days" },
+  { id: 6, title: "NPS trend, rolling 12m", market: "FR", when: "Previous 7 days" },
+];
+
+// Mock generate. Replace with a real fetch() to your FastAPI endpoint later.
+function generateDashboard() {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({ status: "done", pages: [] }), 1200);
+  });
+}
+
+export default function App() {
+  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const [activeId, setActiveId] = useState(INITIAL_SESSIONS[0].id);
+  const [query, setQuery] = useState("");
+
+  const [persona, setPersona] = useState("Executive");
+  const [tool, setTool] = useState("power_bi");
+  const [file, setFile] = useState(null);
+  const [instructions, setInstructions] = useState("");
+  const [phase, setPhase] = useState("idle"); // idle | working | done | error
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const active = sessions.find((s) => s.id === activeId) || null;
+
+  const handleNew = () => {
+    const id = Date.now();
+    setSessions((prev) => [
+      { id, title: "Untitled dashboard", market: "DE", when: "Today" },
+      ...prev,
+    ]);
+    setActiveId(id);
+    setFile(null);
+    setInstructions("");
+    setPhase("idle");
+    setResult(null);
+    setError("");
+  };
+
+  const handleGenerate = async () => {
+    setPhase("working");
+    setError("");
+    setResult(null);
+    try {
+      const res = await generateDashboard({ file, persona, tool, instructions });
+      setResult(res);
+      setPhase("done");
+    } catch (e) {
+      setError(e.message || "Something went wrong");
+      setPhase("error");
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-full bg-slate-50 text-sm text-slate-800 antialiased">
+      <Sidebar
+        sessions={sessions}
+        activeId={activeId}
+        query={query}
+        onQuery={setQuery}
+        onSelect={setActiveId}
+        onNew={handleNew}
+      />
+      <main className="flex min-w-0 flex-1 flex-col">
+        <TopBar title={active ? active.title : "New dashboard"} market={(active && active.market) || "DE"} />
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl px-8 py-9">
+            <h1 className="text-2xl font-semibold text-slate-900">Create a dashboard</h1>
+            <p className="mt-1.5 max-w-xl text-slate-500">
+              Upload a market CSV, set the persona and target tool, and describe what you want to
+              see. Studio builds the pages and renders them as images.
+            </p>
+
+            <GeneratorForm
+              persona={persona} setPersona={setPersona}
+              tool={tool} setTool={setTool}
+              file={file} setFile={setFile}
+              instructions={instructions} setInstructions={setInstructions}
+              phase={phase} onGenerate={handleGenerate}
+            />
+
+            <PreviewPanel phase={phase} result={result} error={error} tool={tool} />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/Sidebar.jsx
+==================================================================
+import { Plus, Search, LayoutDashboard, FileText } from "lucide-react";
+
+const GROUPS = ["Today", "Yesterday", "Previous 7 days"];
+
+export default function Sidebar({ sessions, activeId, query, onQuery, onSelect, onNew }) {
+  return (
+    <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white md:flex">
+      <div className="flex items-center gap-2.5 px-5 py-4">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#E60000] text-white">
+          <LayoutDashboard size={17} />
+        </div>
+        <div>
+          <div className="font-semibold leading-tight text-slate-900">Dashboard Studio</div>
+          <div className="text-xs text-slate-400">Market analytics</div>
+        </div>
+      </div>
+
+      <div className="px-3">
+        <button
+          onClick={onNew}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E60000] py-2.5 font-medium text-white transition-colors hover:bg-[#C20000]"
+        >
+          <Plus size={16} /> New dashboard
+        </button>
+      </div>
+
+      <div className="relative mx-3 mt-3">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder="Search dashboards"
+          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000] focus:bg-white"
+        />
+      </div>
+
+      <nav className="mt-2 flex-1 overflow-y-auto px-2 pb-3">
+        {GROUPS.map((g) => {
+          const rows = sessions.filter(
+            (s) => s.when === g && s.title.toLowerCase().includes(query.toLowerCase())
+          );
+          if (!rows.length) return null;
+          return (
+            <div key={g}>
+              <div className="px-3 pb-1 pt-4 text-xs font-medium uppercase tracking-wide text-slate-400">
+                {g}
+              </div>
+              {rows.map((s) => {
+                const on = s.id === activeId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onSelect(s.id)}
+                    className={
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors " +
+                      (on ? "bg-[#FCE8E8] text-[#E60000]" : "text-slate-600 hover:bg-slate-100")
+                    }
+                  >
+                    <FileText size={15} className={on ? "text-[#E60000]" : "text-slate-400"} />
+                    <span className="flex-1 truncate">{s.title}</span>
+                    <span className={"text-xs " + (on ? "text-[#E60000]" : "text-slate-400")}>{s.market}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="flex items-center gap-2.5 border-t border-slate-200 px-4 py-3">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-200 text-xs font-semibold text-slate-600">
+          DE
+        </div>
+        <div className="leading-tight">
+          <div className="font-medium text-slate-700">Market team</div>
+          <div className="text-xs text-slate-400">Germany · Analyst</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/TopBar.jsx
+==================================================================
+import { ChevronDown } from "lucide-react";
+
+const MARKET_NAMES = { DE: "Germany", UK: "United Kingdom", US: "United States", FR: "France", APAC: "APAC" };
+
+export default function TopBar({ title, market }) {
+  return (
+    <header className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
+      <div className="min-w-0">
+        <div className="truncate font-medium text-slate-900">{title}</div>
+        <div className="text-xs text-slate-400">Draft · not saved</div>
+      </div>
+      <button className="ml-auto flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
+        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        {MARKET_NAMES[market] || market}
+        <ChevronDown size={14} className="text-slate-400" />
+      </button>
+    </header>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/Step.jsx
+==================================================================
+export default function Step({ n, label, hint, children }) {
+  return (
+    <section className="mt-7">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 font-mono text-xs text-slate-500">
+          {n}
+        </span>
+        <span className="font-medium text-slate-800">{label}</span>
+        <span className="text-slate-400">· {hint}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/GeneratorForm.jsx
+==================================================================
+import { useRef } from "react";
+import { UploadCloud, Check, Sparkles } from "lucide-react";
+import Step from "./Step.jsx";
+
+const PERSONAS = ["Executive", "Analyst", "Operations", "Finance"];
+const TOOLS = [
+  { id: "power_bi", name: "Power BI", vendor: "Microsoft", dot: "bg-amber-400" },
+  { id: "qlik", name: "Qlik Sense", vendor: "Qlik", dot: "bg-emerald-500" },
+  { id: "sac", name: "SAP Analytics", vendor: "SAC", dot: "bg-sky-500" },
+];
+
+export default function GeneratorForm({
+  persona, setPersona, tool, setTool, file, setFile,
+  instructions, setInstructions, phase, onGenerate,
+}) {
+  const fileRef = useRef(null);
+  const onPick = (e) => { if (e.target.files[0]) setFile(e.target.files[0]); };
+
+  return (
+    <>
+      {/* 1 - Upload */}
+      <Step n="1" label="Upload data" hint="CSV up to 50 MB">
+        <button
+          onClick={() => fileRef.current && fileRef.current.click()}
+          className="flex w-full items-center gap-4 rounded-xl border border-dashed border-slate-300 bg-white p-5 text-left transition-colors hover:border-[#E60000] hover:bg-[#FCE8E8]"
+        >
+          <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#FCE8E8] text-[#E60000]">
+            <UploadCloud size={20} />
+          </div>
+          <div>
+            <div className="font-medium text-slate-800">Drop your CSV here, or click to browse</div>
+            <div className="text-slate-500">We profile columns, types and ranges automatically</div>
+          </div>
+        </button>
+        <input ref={fileRef} type="file" accept=".csv" hidden onChange={onPick} />
+        {file && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700">
+            <Check size={14} /> <span className="font-mono text-xs">{file.name}</span>
+          </div>
+        )}
+      </Step>
+
+      {/* 2 - Persona */}
+      <Step n="2" label="Persona" hint="who this is for">
+        <div className="flex flex-wrap gap-2">
+          {PERSONAS.map((p) => {
+            const on = p === persona;
+            return (
+              <button
+                key={p}
+                onClick={() => setPersona(p)}
+                className={
+                  "rounded-full border px-4 py-2 transition-colors " +
+                  (on
+                    ? "border-[#E60000] bg-[#E60000] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300")
+                }
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 3 - Tool */}
+      <Step n="3" label="Target tool" hint="the look to match">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {TOOLS.map((t) => {
+            const on = t.id === tool;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTool(t.id)}
+                className={
+                  "rounded-xl border bg-white p-4 text-left transition-all " +
+                  (on ? "border-[#E60000] ring-2 ring-[#E60000]/20" : "border-slate-200 hover:border-slate-300")
+                }
+              >
+                <span className={"mb-3 block h-2.5 w-2.5 rounded-full " + t.dot} />
+                <div className="font-medium text-slate-800">{t.name}</div>
+                <div className="text-xs text-slate-400">{t.vendor}</div>
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 4 - Instructions */}
+      <Step n="4" label="What do you want to see" hint="plain language">
+        <textarea
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder="e.g. Revenue by region and month, top 10 products by units, and a churn KPI up top. Summary on page one, detail on page two."
+          className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white p-4 leading-relaxed text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000]"
+        />
+      </Step>
+
+      <div className="mt-6 flex items-center gap-4">
+        <button
+          onClick={onGenerate}
+          disabled={phase === "working"}
+          className="flex items-center gap-2 rounded-lg bg-[#E60000] px-5 py-2.5 font-medium text-white transition-colors hover:bg-[#C20000] disabled:opacity-60"
+        >
+          <Sparkles size={16} />
+          {phase === "working" ? "Generating…" : "Generate dashboard"}
+        </button>
+        <span className="text-slate-400">Pages render as images you can download</span>
+      </div>
+    </>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/PreviewPanel.jsx
+==================================================================
+import { Download } from "lucide-react";
+import DashboardPreview from "./DashboardPreview.jsx";
+
+const TOOL_LABELS = { power_bi: "Power BI", qlik: "Qlik Sense", sac: "SAP Analytics" };
+
+export default function PreviewPanel({ phase, result, error, tool }) {
+  if (phase === "idle") return null;
+
+  return (
+    <div className="mt-8 border-t border-slate-200 pt-8">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm font-medium text-slate-700">
+          {phase === "working" && "Rendering pages…"}
+          {phase === "done" && "1 page · styled for " + (TOOL_LABELS[tool] || "Power BI")}
+          {phase === "error" && "Generation failed"}
+        </span>
+        {phase === "done" && (
+          <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
+            <Download size={14} /> Download PNG
+          </button>
+        )}
+      </div>
+
+      {phase === "working" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-56 animate-pulse rounded-xl border border-slate-200 bg-slate-100" />
+          ))}
+        </div>
+      )}
+
+      {phase === "error" && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {error} — check the API is running, or try again.
+        </div>
+      )}
+
+      {phase === "done" &&
+        (result && result.pages && result.pages.length ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {result.pages.map((p, i) => (
+              <img
+                key={i}
+                src={p.pngUrl}
+                alt={"Dashboard page " + (i + 1)}
+                className="w-full rounded-xl border border-slate-200"
+              />
+            ))}
+          </div>
+        ) : (
+          <DashboardPreview />
+        ))}
+    </div>
+  );
+}
+
+
+==================================================================
+ FILE: src/components/DashboardPreview.jsx
+==================================================================
+import { ArrowUpRight } from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+
+const VODAFONE_RED = "#E60000";
+const CHART_GRID = "#EEF2F7";
+const CHART_AXIS = "#94A3B8";
+
+const TREND = [
+  { m: "Jan", v: 210 }, { m: "Feb", v: 245 }, { m: "Mar", v: 228 },
+  { m: "Apr", v: 289 }, { m: "May", v: 312 }, { m: "Jun", v: 356 },
+];
+const REGION = [
+  { name: "North", revenue: 412 }, { name: "South", revenue: 388 },
+  { name: "East", revenue: 296 }, { name: "West", revenue: 331 },
+  { name: "Central", revenue: 274 },
+];
+const KPIS = [
+  { k: "Total revenue", v: "€1.70M", d: "+12.4%" },
+  { k: "Units sold", v: "48,211", d: "+6.1%" },
+  { k: "Churn rate", v: "7.1%", d: "-0.8%" },
+];
+
+export default function DashboardPreview() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+        <span className="text-sm font-semibold text-slate-800">Germany — Q2 sales overview</span>
+        <span className="ml-auto text-xs text-slate-400">Power BI theme · page 1</span>
+      </div>
+      <div className="space-y-4 p-5">
+        <div className="grid grid-cols-3 gap-3">
+          {KPIS.map((kpi) => (
+            <div key={kpi.k} className="rounded-lg border border-slate-200 p-3">
+              <div className="text-xs text-slate-500">{kpi.k}</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{kpi.v}</div>
+              <div className="mt-0.5 flex items-center gap-0.5 text-xs font-medium text-emerald-600">
+                <ArrowUpRight size={12} /> {kpi.d}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 p-3">
+            <div className="mb-2 text-xs font-medium text-slate-600">Revenue over time</div>
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={TREND} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                  <XAxis dataKey="m" tick={{ fontSize: 11, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="v" stroke={VODAFONE_RED} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <div className="mb-2 text-xs font-medium text-slate-600">Revenue by region</div>
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={REGION} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: "#FEF2F2" }} />
+                  <Bar dataKey="revenue" fill={VODAFONE_RED} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+==================================================================
+ OPTIONAL — Vodafone-style font
+==================================================================
+Add this line inside index.html <head> (project root) for the Figtree look
+(a close open stand-in for Vodafone's typeface). If skipped, it falls back to
+your system sans and still looks clean.
+
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+
+==================================================================
+ QUICK CHECK IF STYLES DON'T APPLY
+==================================================================
+- tailwind.config.js "content" must include "./src/**/*.{js,jsx}"
+- src/index.css must have the three @tailwind lines
+- src/main.jsx must import "./index.css"  (Vite's default already does)
+- restart: npm run dev
+==================================================================
