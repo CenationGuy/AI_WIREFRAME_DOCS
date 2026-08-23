@@ -1,0 +1,610 @@
+Dashboardpreview.jsx
+
+import { ArrowUpRight } from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+
+const VODAFONE_RED = "#E60000";
+const CHART_GRID = "#F1F5F9";
+const CHART_AXIS = "#94A3B8";
+
+const TREND = [
+  { m: "Jan", v: 210 }, { m: "Feb", v: 245 }, { m: "Mar", v: 228 },
+  { m: "Apr", v: 289 }, { m: "May", v: 312 }, { m: "Jun", v: 356 },
+];
+const REGION = [
+  { name: "North", revenue: 412 }, { name: "South", revenue: 388 },
+  { name: "East", revenue: 296 }, { name: "West", revenue: 331 },
+  { name: "Central", revenue: 274 },
+];
+const KPIS = [
+  { k: "Total Revenue", v: "€1.70M", d: "+12.4%" },
+  { k: "Units Sold", v: "48,211", d: "+6.1%" },
+  { k: "Churn Rate", v: "7.1%", d: "-0.8%" },
+];
+
+export default function DashboardPreview({ tool = "power_bi", persona = "Executive" }) {
+  const toolName = tool === "qlik" ? "Qlik Sense" : tool === "sac" ? "SAP Analytics" : "Power BI";
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-3.5 py-2">
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="text-xs font-semibold text-slate-800">Germany — Q2 Sales Overview</span>
+        </div>
+        <span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+          {toolName} · {persona} View
+        </span>
+      </div>
+
+      {/* Visual Content */}
+      <div className="space-y-3 p-3.5">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-3 gap-2">
+          {KPIS.map((kpi) => (
+            <div key={kpi.k} className="rounded-lg border border-slate-100 bg-slate-50/50 p-2.5">
+              <div className="text-[10px] font-medium text-slate-500">{kpi.k}</div>
+              <div className="mt-0.5 text-base font-bold text-slate-900">{kpi.v}</div>
+              <div className="flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600">
+                <ArrowUpRight size={11} /> {kpi.d}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-2.5">
+            <div className="mb-1 text-[11px] font-semibold text-slate-700">Revenue Trend</div>
+            <div className="h-32">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={TREND} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                  <XAxis dataKey="m" tick={{ fontSize: 9, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="v" stroke={VODAFONE_RED} strokeWidth={2} dot={{ r: 2, fill: VODAFONE_RED }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-2.5">
+            <div className="mb-1 text-[11px] font-semibold text-slate-700">Revenue by Region</div>
+            <div className="h-32">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={REGION} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: CHART_AXIS }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: "#FEF2F2" }} />
+                  <Bar dataKey="revenue" fill={VODAFONE_RED} radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+generatorform.jsx
+
+import { useRef } from "react";
+import { UploadCloud, Sparkles, FileSpreadsheet, X } from "lucide-react";
+import Step from "./Step.jsx";
+
+const PERSONAS = ["Executive", "Analyst", "Operations", "Finance"];
+const TOOLS = [
+  { id: "power_bi", name: "Power BI", vendor: "Microsoft", dot: "bg-amber-400" },
+  { id: "qlik", name: "Qlik Sense", vendor: "Qlik", dot: "bg-emerald-500" },
+  { id: "sac", name: "SAP Analytics", vendor: "SAC", dot: "bg-sky-500" },
+];
+
+export default function GeneratorForm({
+  persona, setPersona, tool, setTool, file, setFile,
+  instructions, setInstructions, phase, onGenerate,
+}) {
+  const fileRef = useRef(null);
+  const onPick = (e) => { if (e.target.files[0]) setFile(e.target.files[0]); };
+
+  return (
+    <div className="flex flex-col">
+      {/* 1 - Upload */}
+      <Step n="1" label="Dataset" hint="CSV up to 50 MB">
+        {!file ? (
+          <button
+            type="button"
+            onClick={() => fileRef.current && fileRef.current.click()}
+            className="group flex w-full items-center gap-2.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-2.5 text-left transition-all hover:border-[#E60000] hover:bg-rose-50/20"
+          >
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-[#E60000] shadow-2xs">
+              <UploadCloud size={15} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold text-slate-800">Choose CSV file</div>
+              <div className="truncate text-[10px] text-slate-400">Schema profiled automatically</div>
+            </div>
+          </button>
+        ) : (
+          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-emerald-900">
+            <div className="flex items-center gap-2 truncate">
+              <FileSpreadsheet size={15} className="shrink-0 text-emerald-600" />
+              <span className="truncate font-mono text-xs font-medium">{file.name}</span>
+            </div>
+            <button
+              onClick={() => setFile(null)}
+              className="rounded p-0.5 text-slate-400 hover:text-slate-700"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
+        <input ref={fileRef} type="file" accept=".csv" hidden onChange={onPick} />
+      </Step>
+
+      {/* 2 - Persona */}
+      <Step n="2" label="Target Persona" hint="Audience">
+        <div className="grid grid-cols-4 gap-1.5">
+          {PERSONAS.map((p) => {
+            const on = p === persona;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPersona(p)}
+                className={
+                  "rounded-lg py-1.5 text-center text-xs font-medium transition-all " +
+                  (on
+                    ? "bg-[#E60000] font-semibold text-white shadow-2xs"
+                    : "border border-slate-200/80 bg-slate-50/50 text-slate-600 hover:bg-white")
+                }
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 3 - Target BI Tool */}
+      <Step n="3" label="Target BI Tool" hint="Visual style">
+        <div className="grid grid-cols-3 gap-1.5">
+          {TOOLS.map((t) => {
+            const on = t.id === tool;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTool(t.id)}
+                className={
+                  "rounded-lg border p-2 text-left transition-all " +
+                  (on
+                    ? "border-[#E60000] bg-rose-50/30 ring-1 ring-[#E60000]"
+                    : "border-slate-200/80 bg-slate-50/30 hover:bg-white")
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className={"h-1.5 w-1.5 rounded-full " + t.dot} />
+                  <span className="text-xs font-semibold text-slate-800">{t.name}</span>
+                </div>
+                <div className="mt-0.5 text-[9px] text-slate-400">{t.vendor}</div>
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 4 - Instructions */}
+      <Step n="4" label="Prompt & Instructions" hint="Plain text">
+        <textarea
+          rows={2}
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder="e.g. Total revenue KPI, regional bar chart, top 5 products, churn trend."
+          className="w-full resize-none rounded-lg border border-slate-200/80 bg-slate-50/40 p-2.5 text-xs leading-relaxed text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000] focus:bg-white"
+        />
+      </Step>
+
+      {/* Action Button */}
+      <div className="mt-3.5">
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={phase === "working"}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#E60000] py-2.5 text-xs font-semibold text-white shadow-2xs transition-all hover:bg-[#C20000] active:scale-[0.99] disabled:opacity-60"
+        >
+          <Sparkles size={14} />
+          {phase === "working" ? "Generating Wireframe…" : "Generate Wireframe"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+
+previewpanel.jsx
+
+import { Download, LayoutDashboard, Sparkles } from "lucide-react";
+import DashboardPreview from "./DashboardPreview.jsx";
+
+const TOOL_LABELS = { power_bi: "Power BI", qlik: "Qlik Sense", sac: "SAP Analytics" };
+
+export default function PreviewPanel({ phase, result, error, tool, persona }) {
+  return (
+    <div className="flex h-full flex-col">
+      {/* Top Controls */}
+      <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            Canvas Preview
+          </h2>
+          <p className="text-[10px] text-slate-400">
+            {phase === "done"
+              ? `Theme: ${TOOL_LABELS[tool]} · Persona: ${persona}`
+              : "Visual rendering of generated wireframe"}
+          </p>
+        </div>
+        {phase === "done" && (
+          <button className="flex items-center gap-1 rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 shadow-2xs hover:bg-slate-50">
+            <Download size={12} /> Export PNG
+          </button>
+        )}
+      </div>
+
+      {/* IDLE STATE */}
+      {phase === "idle" && (
+        <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-6 text-center">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#E60000] shadow-2xs ring-1 ring-slate-100">
+            <LayoutDashboard size={18} />
+          </div>
+          <h3 className="mt-2.5 text-xs font-semibold text-slate-800">Canvas Ready</h3>
+          <p className="mt-0.5 max-w-xs text-[11px] text-slate-400">
+            Configure parameters on the left and click Generate to produce your wireframe.
+          </p>
+        </div>
+      )}
+
+      {/* WORKING STATE */}
+      {phase === "working" && (
+        <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-lg border border-slate-100 bg-slate-50/30 p-6 text-center">
+          <div className="relative flex h-10 w-10 items-center justify-center">
+            <div className="absolute h-full w-full animate-ping rounded-full bg-rose-200 opacity-60" />
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-[#E60000] text-white shadow-2xs">
+              <Sparkles size={15} className="animate-spin" />
+            </div>
+          </div>
+          <div className="mt-3 text-xs font-semibold text-slate-800">Constructing Wireframe</div>
+          <div className="mt-0.5 text-[10px] text-slate-400">
+            Applying {TOOL_LABELS[tool]} design guidelines…
+          </div>
+        </div>
+      )}
+
+      {/* ERROR STATE */}
+      {phase === "error" && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3 text-xs text-rose-700">
+          <span className="font-semibold">Generation Failed: </span>
+          {error}
+        </div>
+      )}
+
+      {/* DONE STATE */}
+      {phase === "done" && (
+        <div className="flex-1">
+          {result && result.pages && result.pages.length ? (
+            <div className="space-y-3">
+              {result.pages.map((p, i) => (
+                <img
+                  key={i}
+                  src={p.pngUrl}
+                  alt={"Dashboard page " + (i + 1)}
+                  className="w-full rounded-lg border border-slate-200 shadow-2xs"
+                />
+              ))}
+            </div>
+          ) : (
+            <DashboardPreview tool={tool} persona={persona} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+sidebar.jsx
+
+import { Plus, Search, LayoutDashboard, FileText } from "lucide-react";
+
+const GROUPS = ["Today", "Yesterday", "Previous 7 days"];
+
+export default function Sidebar({ sessions, activeId, query, onQuery, onSelect, onNew }) {
+  return (
+    <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white md:flex">
+      <div className="flex items-center gap-2.5 px-5 py-4">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#E60000] text-white">
+          <LayoutDashboard size={17} />
+        </div>
+        <div>
+          <div className="font-semibold leading-tight text-slate-900">Dashboard Studio</div>
+          <div className="text-xs text-slate-400">Market analytics</div>
+        </div>
+      </div>
+
+      <div className="px-3">
+        <button
+          onClick={onNew}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E60000] py-2.5 font-medium text-white transition-colors hover:bg-[#C20000]"
+        >
+          <Plus size={16} /> New dashboard
+        </button>
+      </div>
+
+      <div className="relative mx-3 mt-3">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder="Search dashboards"
+          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000] focus:bg-white"
+        />
+      </div>
+
+      <nav className="mt-2 flex-1 overflow-y-auto px-2 pb-3">
+        {GROUPS.map((g) => {
+          const rows = sessions.filter(
+            (s) => s.when === g && s.title.toLowerCase().includes(query.toLowerCase())
+          );
+          if (!rows.length) return null;
+          return (
+            <div key={g}>
+              <div className="px-3 pb-1 pt-4 text-xs font-medium uppercase tracking-wide text-slate-400">
+                {g}
+              </div>
+              {rows.map((s) => {
+                const on = s.id === activeId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onSelect(s.id)}
+                    className={
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors " +
+                      (on ? "bg-[#FCE8E8] text-[#E60000]" : "text-slate-600 hover:bg-slate-100")
+                    }
+                  >
+                    <FileText size={15} className={on ? "text-[#E60000]" : "text-slate-400"} />
+                    <span className="flex-1 truncate">{s.title}</span>
+                    <span className={"text-xs " + (on ? "text-[#E60000]" : "text-slate-400")}>{s.market}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="flex items-center gap-2.5 border-t border-slate-200 px-4 py-3">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-200 text-xs font-semibold text-slate-600">
+          DE
+        </div>
+        <div className="leading-tight">
+          <div className="font-medium text-slate-700">Market team</div>
+          <div className="text-xs text-slate-400">Germany · Analyst</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
+step.jsx
+
+export default function Step({ n, label, hint, children }) {
+  return (
+    <section className="border-b border-slate-100 py-3 first:pt-0 last:border-b-0 last:pb-0">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="grid h-4.5 w-4.5 place-items-center rounded bg-slate-100 text-[10px] font-bold text-slate-600">
+            {n}
+          </span>
+          <span className="text-xs font-semibold text-slate-800">{label}</span>
+        </div>
+        {hint && <span className="text-[10px] text-slate-400">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+
+
+topbar.jsx
+
+import { ChevronDown } from "lucide-react";
+
+const MARKET_NAMES = { DE: "Germany", UK: "United Kingdom", US: "United States", FR: "France", APAC: "APAC" };
+
+export default function TopBar({ title, market }) {
+  return (
+    <header className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
+      <div className="min-w-0">
+        <div className="truncate font-medium text-slate-900">{title}</div>
+        <div className="text-xs text-slate-400">Draft · not saved</div>
+      </div>
+      <button className="ml-auto flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
+        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        {MARKET_NAMES[market] || market}
+        <ChevronDown size={14} className="text-slate-400" />
+      </button>
+    </header>
+  );
+}
+
+
+app.jsx
+
+import { useState } from "react";
+import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import GeneratorForm from "./components/GeneratorForm.jsx";
+import PreviewPanel from "./components/PreviewPanel.jsx";
+
+const INITIAL_SESSIONS = [
+  { id: 1, title: "Q2 sales overview", market: "DE", when: "Today" },
+  { id: 2, title: "Retail footfall by store", market: "UK", when: "Today" },
+  { id: 3, title: "Churn drivers — enterprise", market: "APAC", when: "Yesterday" },
+  { id: 4, title: "Marketing spend vs pipeline", market: "US", when: "Yesterday" },
+  { id: 5, title: "Inventory turns by category", market: "DE", when: "Previous 7 days" },
+  { id: 6, title: "NPS trend, rolling 12m", market: "FR", when: "Previous 7 days" },
+];
+
+function generateDashboard() {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({ status: "done", pages: [] }), 1200);
+  });
+}
+
+export default function App() {
+  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const [activeId, setActiveId] = useState(INITIAL_SESSIONS[0].id);
+  const [query, setQuery] = useState("");
+
+  const [persona, setPersona] = useState("Executive");
+  const [tool, setTool] = useState("power_bi");
+  const [file, setFile] = useState(null);
+  const [instructions, setInstructions] = useState("");
+  const [phase, setPhase] = useState("idle");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const active = sessions.find((s) => s.id === activeId) || null;
+
+  const handleNew = () => {
+    const id = Date.now();
+    setSessions((prev) => [
+      { id, title: "Untitled dashboard", market: "DE", when: "Today" },
+      ...prev,
+    ]);
+    setActiveId(id);
+    setFile(null);
+    setInstructions("");
+    setPhase("idle");
+    setResult(null);
+    setError("");
+  };
+
+  const handleGenerate = async () => {
+    setPhase("working");
+    setError("");
+    setResult(null);
+    try {
+      const res = await generateDashboard({ file, persona, tool, instructions });
+      setResult(res);
+      setPhase("done");
+    } catch (e) {
+      setError(e.message || "Something went wrong");
+      setPhase("error");
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-full bg-slate-50 text-slate-800 antialiased">
+      {/* Sidebar */}
+      <Sidebar
+        sessions={sessions}
+        activeId={activeId}
+        query={query}
+        onQuery={setQuery}
+        onSelect={setActiveId}
+        onNew={handleNew}
+      />
+
+      {/* Main Container */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar
+          title={active ? active.title : "New dashboard"}
+          market={(active && active.market) || "DE"}
+        />
+
+        {/* Scrollable Workspace */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#E60000]">
+                  Studio Config
+                </span>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                  Dashboard Wireframe Generator
+                </h1>
+              </div>
+            </div>
+
+            {/* 2-Column Responsive Cards */}
+            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+              {/* Left Column: Form Controls */}
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs lg:col-span-5">
+                <GeneratorForm
+                  persona={persona} setPersona={setPersona}
+                  tool={tool} setTool={setTool}
+                  file={file} setFile={setFile}
+                  instructions={instructions} setInstructions={setInstructions}
+                  phase={phase} onGenerate={handleGenerate}
+                />
+              </div>
+
+              {/* Right Column: Preview Canvas */}
+              <div className="min-h-[460px] rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs lg:col-span-7">
+                <PreviewPanel
+                  phase={phase}
+                  result={result}
+                  error={error}
+                  tool={tool}
+                  persona={persona}
+                />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: 'Figtree', system-ui, -apple-system, sans-serif; }
+
+
+
+tailwindconfig.js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+
+
+postcss.config.js
+
+export default {
+  plugins: { tailwindcss: {}, autoprefixer: {} },
+};
