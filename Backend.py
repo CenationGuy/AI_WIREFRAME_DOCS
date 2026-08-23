@@ -12,7 +12,6 @@ app = FastAPI(
 
 # --------------------------------------------------
 # CORS
-# Allows your React frontend to call this API
 # --------------------------------------------------
 
 app.add_middleware(
@@ -37,8 +36,6 @@ def home():
 
 # --------------------------------------------------
 # GENERATE DASHBOARD
-# STEP 1:
-# Receive CSV and return basic data information
 # --------------------------------------------------
 
 @app.post("/generate-dashboard")
@@ -54,7 +51,6 @@ async def generate_dashboard(
             detail="Please upload a CSV file."
         )
 
-
     try:
 
         # Read uploaded CSV
@@ -65,7 +61,20 @@ async def generate_dashboard(
         )
 
 
-        # Basic response for now
+        # ----------------------------------------------
+        # Convert NaN values to None
+        #
+        # JSON understands None as null
+        # but does not accept NaN
+        # ----------------------------------------------
+
+        preview_df = (
+            df.head(5)
+            .where(pd.notnull(df.head(5)), None)
+        )
+
+
+        # Return JSON-safe response
         return {
 
             "status": "success",
@@ -78,7 +87,7 @@ async def generate_dashboard(
 
             "columns": list(df.columns),
 
-            "preview": df.head(5).to_dict(
+            "preview": preview_df.to_dict(
                 orient="records"
             )
 
