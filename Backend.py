@@ -4,8 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
 
-# Import our new CSV profiler
+# ==================================================
+# IMPORT OUR BACKEND COMPONENTS
+# ==================================================
+
 from csv_profiler import profile_csv_dataframe
+from dashboard_planner import create_dashboard_plan
 
 
 # ==================================================
@@ -19,7 +23,9 @@ app = FastAPI(
 
 # ==================================================
 # CORS
-# Allows React frontend to communicate with FastAPI
+#
+# Allows the React frontend to communicate with
+# the FastAPI backend.
 # ==================================================
 
 app.add_middleware(
@@ -46,17 +52,23 @@ def home():
 # ==================================================
 # GENERATE DASHBOARD
 #
-# CURRENT FLOW:
+# COMPLETE CURRENT FLOW:
 #
-# Upload CSV
-#      ↓
-# FastAPI receives CSV
-#      ↓
+# User uploads CSV
+#        ↓
+# FastAPI receives file
+#        ↓
 # Pandas reads CSV
-#      ↓
-# csv_profiler.py analyzes DataFrame
-#      ↓
-# Return Data Profile
+#        ↓
+# CSV Profiler analyzes dataset
+#        ↓
+# data_profile
+#        ↓
+# Dashboard Planner sends profile to Gemini
+#        ↓
+# dashboard_spec
+#        ↓
+# Return result
 # ==================================================
 
 @app.post("/generate-dashboard")
@@ -90,31 +102,56 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
+        # STEP 1:
         # PROFILE THE CSV
         #
-        # We pass the Pandas DataFrame to our
-        # csv_profiler.py
+        # df
+        # ↓
+        # data_profile
         # ------------------------------------------
 
-        data_profile = profile_csv_dataframe(df)
+        data_profile = profile_csv_dataframe(
+            df
+        )
 
 
         # ------------------------------------------
-        # RETURN RESULT
+        # STEP 2:
+        # CREATE DASHBOARD PLAN
+        #
+        # data_profile
+        # ↓
+        # Gemini
+        # ↓
+        # dashboard_spec
+        # ------------------------------------------
+
+        dashboard_spec = create_dashboard_plan(
+            data_profile
+        )
+
+
+        # ------------------------------------------
+        # RETURN FINAL RESPONSE
         # ------------------------------------------
 
         return {
 
             "status": "success",
 
-            "message": "CSV profiled successfully",
+            "message": "Dashboard plan generated successfully",
 
             "filename": file.filename,
 
-            "data_profile": data_profile
+            "data_profile": data_profile,
 
+            "dashboard_spec": dashboard_spec
         }
 
+
+    # ----------------------------------------------
+    # ERROR HANDLING
+    # ----------------------------------------------
 
     except Exception as e:
 
