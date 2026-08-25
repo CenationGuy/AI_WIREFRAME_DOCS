@@ -33,15 +33,11 @@ llm = ChatGoogleGenerativeAI(
 
 def create_dashboard_plan(data_profile):
 
-    # =====================================================
-    # BUILD PROMPT
-    # =====================================================
-
     prompt = f"""
-You are an expert dashboard planner.
+You are an expert enterprise dashboard planner.
 
-Your job is to analyze the dataset profile below and create a
-meaningful dashboard plan.
+Your job is to analyze the dataset profile below and create
+a meaningful and well-organized dashboard plan.
 
 You must use ONLY the available columns.
 
@@ -63,11 +59,50 @@ Measures:
 YOUR TASK
 ========================================================
 
-Create a dashboard plan.
+Analyze the complexity and analytical scope of the dataset.
 
-Decide:
+Decide whether the dashboard should contain:
 
-1. A suitable dashboard title
+- ONE sheet for simple datasets
+
+OR
+
+- MULTIPLE sheets for complex datasets with multiple
+  meaningful areas of analysis.
+
+Do NOT create multiple sheets unnecessarily.
+
+Use multiple sheets only when separating the analysis
+improves clarity and avoids an overcrowded dashboard.
+
+
+========================================================
+SHEET DESIGN RULES
+========================================================
+
+Each sheet should focus on a clear analytical purpose.
+
+Examples include:
+
+- Executive Overview
+- Sales Performance
+- Regional Analysis
+- Product Analysis
+- Customer Analysis
+- Financial Performance
+- Operational Analysis
+
+Only create sheets that are meaningful for the available data.
+
+Do not invent analytical areas that cannot be supported
+by the dataset columns.
+
+
+========================================================
+FOR EACH SHEET DECIDE
+========================================================
+
+1. A suitable sheet title
 
 2. Important KPI cards
 
@@ -90,6 +125,9 @@ IMPORTANT RULES
 - Use date dimensions for time-based analysis when available.
 - Use categorical dimensions for comparisons when appropriate.
 - Use measures for numerical analysis.
+- Avoid duplicate charts across sheets.
+- Each sheet must have a clear purpose.
+- Do not overcrowd a single sheet.
 - Return ONLY valid JSON.
 - Do not include explanations.
 - Do not use markdown code blocks.
@@ -98,31 +136,41 @@ IMPORTANT RULES
 Return JSON in exactly this structure:
 
 {{
-    "title": "Dashboard title",
+    "dashboard_title": "Overall dashboard title",
 
-    "kpis": [
+    "sheets": [
+
         {{
-            "title": "KPI name",
-            "field": "column name",
-            "aggregation": "sum"
-        }}
-    ],
+            "sheet_number": 1,
 
-    "charts": [
-        {{
-            "title": "Chart title",
-            "type": "line or bar",
-            "x_axis": "column name",
-            "y_axis": "column name"
-        }}
-    ],
+            "title": "Sheet title",
 
-    "filters": [
-        "column name"
+            "purpose": "Short description of what this sheet analyzes",
+
+            "kpis": [
+                {{
+                    "title": "KPI name",
+                    "field": "column name",
+                    "aggregation": "sum"
+                }}
+            ],
+
+            "charts": [
+                {{
+                    "title": "Chart title",
+                    "type": "line or bar or pie",
+                    "x_axis": "column name",
+                    "y_axis": "column name"
+                }}
+            ],
+
+            "filters": [
+                "column name"
+            ]
+        }}
     ]
 }}
 """
-
 
     # =====================================================
     # CALL GEMINI
@@ -134,7 +182,7 @@ Return JSON in exactly this structure:
 
 
     # =====================================================
-    # CONVERT RESPONSE TO PYTHON DICTIONARY
+    # CONVERT JSON RESPONSE
     # =====================================================
 
     dashboard_spec = json.loads(
@@ -143,7 +191,7 @@ Return JSON in exactly this structure:
 
 
     # =====================================================
-    # RETURN RESULT TO main.py
+    # RETURN DASHBOARD SPEC
     # =====================================================
 
     return dashboard_spec
