@@ -6,10 +6,12 @@ def profile_csv_dataframe(df: pd.DataFrame):
     profile = {
         "total_rows": int(len(df)),
         "total_columns": int(len(df.columns)),
+        "dimensions": [],
+        "date_dimensions": [],
+        "measures": [],
         "columns": []
     }
 
-    # Loop through every column
     for column in df.columns:
 
         column_data = df[column]
@@ -21,16 +23,16 @@ def profile_csv_dataframe(df: pd.DataFrame):
             "unique_values": int(column_data.nunique())
         }
 
+
         # ==========================================
-        # NUMERIC COLUMN
+        # 1. NUMERIC COLUMN → MEASURE
         # ==========================================
 
         if pd.api.types.is_numeric_dtype(column_data):
 
             column_info["column_type"] = "numeric"
 
-            column_info["statistics"] = {
-
+            statistics = {
                 "min": (
                     float(column_data.min())
                     if pd.notnull(column_data.min())
@@ -56,8 +58,29 @@ def profile_csv_dataframe(df: pd.DataFrame):
                 )
             }
 
+            column_info["statistics"] = statistics
+
+            profile["measures"].append(column)
+
+
         # ==========================================
-        # CATEGORICAL / TEXT COLUMN
+        # 2. TRY TO DETECT DATE COLUMN
+        # ==========================================
+
+        elif (
+            "date" in column.lower()
+            or "time" in column.lower()
+            or "year" in column.lower()
+            or "month" in column.lower()
+        ):
+
+            column_info["column_type"] = "date"
+
+            profile["date_dimensions"].append(column)
+
+
+        # ==========================================
+        # 3. EVERYTHING ELSE → DIMENSION
         # ==========================================
 
         else:
@@ -74,7 +97,11 @@ def profile_csv_dataframe(df: pd.DataFrame):
 
             column_info["sample_values"] = sample_values[:10]
 
-        # Add this column's profile
+            profile["dimensions"].append(column)
+
+
+        # Add complete column information
         profile["columns"].append(column_info)
+
 
     return profile
