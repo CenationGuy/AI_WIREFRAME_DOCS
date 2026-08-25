@@ -1,9 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
-import pandas as pd
 import io
 import base64
+import os
+
+import pandas as pd
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from io import BytesIO
 
 
@@ -56,17 +58,11 @@ def home():
 # ==================================================
 # CONVERT PIL IMAGE TO BASE64
 #
-# React cannot directly receive a PIL Image object.
-#
-# So:
-#
 # PIL Image
 #     ↓
 # PNG bytes
 #     ↓
 # Base64 string
-#     ↓
-# JSON response
 # ==================================================
 
 def image_to_base64(image):
@@ -112,7 +108,9 @@ def image_to_base64(image):
 #         ↓
 #     One Image Per Sheet
 #         ↓
-#     Base64 Conversion
+#     Save PNG Files
+#         ↓
+#     Convert to Base64
 #  ↓
 # Final API Response
 # ==================================================
@@ -126,6 +124,13 @@ async def generate_dashboard(
     # CHECK FILE TYPE
     # ----------------------------------------------
 
+    if not file.filename:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No file was uploaded."
+        )
+
     if not file.filename.lower().endswith(".csv"):
 
         raise HTTPException(
@@ -137,9 +142,12 @@ async def generate_dashboard(
     try:
 
         # ------------------------------------------
-        # STEP 1:
-        # READ CSV
+        # STEP 1: READ CSV
         # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 1: READING CSV")
+        print("========================================")
 
         contents = await file.read()
 
@@ -147,97 +155,201 @@ async def generate_dashboard(
             io.BytesIO(contents)
         )
 
+        print(
+            f"CSV loaded successfully: {file.filename}"
+        )
+
+        print(
+            f"Rows: {len(df)}"
+        )
+
+        print(
+            f"Columns: {len(df.columns)}"
+        )
+
 
         # ------------------------------------------
-        # STEP 2:
-        # PROFILE CSV
-        #
-        # DataFrame
-        #     ↓
-        # data_profile
+        # STEP 2: PROFILE CSV
         # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 2: PROFILING CSV")
+        print("========================================")
 
         data_profile = profile_csv_dataframe(
             df
         )
 
+        print(
+            "CSV profiling completed successfully."
+        )
+
 
         # ------------------------------------------
-        # STEP 3:
-        # CREATE DASHBOARD PLAN
-        #
-        # data_profile
-        #     ↓
-        # Gemini
-        #     ↓
-        # dashboard_spec
+        # STEP 3: CREATE DASHBOARD PLAN
         # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 3: CREATING DASHBOARD PLAN")
+        print("========================================")
 
         dashboard_spec = create_dashboard_plan(
             data_profile
         )
 
+        print(
+            "Dashboard plan generated successfully."
+        )
+
+        print(
+            f"Dashboard title: "
+            f"{dashboard_spec.get('dashboard_title')}"
+        )
+
+        print(
+            f"Number of sheets: "
+            f"{len(dashboard_spec.get('sheets', []))}"
+        )
+
 
         # ------------------------------------------
-        # STEP 4:
-        # GENERATE DASHBOARD SUMMARY
-        #
-        # dashboard_spec
-        #     ↓
-        # text summary
+        # STEP 4: GENERATE DASHBOARD SUMMARY
         # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 4: GENERATING DASHBOARD SUMMARY")
+        print("========================================")
 
         dashboard_summary = generate_dashboard_summary(
             dashboard_spec
         )
 
+        print(
+            "Dashboard summary generated successfully."
+        )
+
 
         # ------------------------------------------
-        # STEP 5:
-        # GENERATE DASHBOARD DESIGNS
-        #
-        # Each sheet gets its own generated image
-        #
-        # dashboard_spec
-        #     ↓
-        # visual_designer.py
-        #     ↓
-        # PIL Images
+        # STEP 5: GENERATE DASHBOARD IMAGES
         # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 5: GENERATING DASHBOARD IMAGES")
+        print("========================================")
 
         generated_sheets = generate_dashboard_design(
             dashboard_spec
         )
 
+        print(
+            f"Generated {len(generated_sheets)} "
+            f"dashboard sheet image(s)."
+        )
+
 
         # ------------------------------------------
-        # STEP 6:
-        # CONVERT ALL IMAGES TO BASE64
+        # STEP 6: CREATE IMAGE OUTPUT FOLDER
+        # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 6: SAVING GENERATED IMAGES")
+        print("========================================")
+
+        os.makedirs(
+            "generated_images",
+            exist_ok=True
+        )
+
+
+        # ------------------------------------------
+        # STEP 7:
+        #
+        # SAVE EACH IMAGE
+        # +
+        # CONVERT EACH IMAGE TO BASE64
         # ------------------------------------------
 
         response_sheets = []
 
         for sheet in generated_sheets:
 
+            sheet_number = sheet.get(
+                "sheet_number",
+                1
+            )
+
+            sheet_title = sheet.get(
+                "title",
+                "Untitled Sheet"
+            )
+
+
+            # --------------------------------------
+            # CREATE FILE PATH
+            # --------------------------------------
+
+            image_path = os.path.join(
+                "generated_images",
+                f"sheet_{sheet_number}.png"
+            )
+
+
+            # --------------------------------------
+            # SAVE IMAGE AS PNG
+            # --------------------------------------
+
+            sheet["image"].save(
+                image_path,
+                format="PNG"
+            )
+
+            print(
+                f"Image saved to: {image_path}"
+            )
+
+
+            # --------------------------------------
+            # CONVERT IMAGE TO BASE64
+            # --------------------------------------
+
             image_base64 = image_to_base64(
                 sheet["image"]
             )
 
+
+            # --------------------------------------
+            # ADD SHEET TO API RESPONSE
+            # --------------------------------------
+
             response_sheets.append(
                 {
-                    "sheet_number": sheet["sheet_number"],
-                    "title": sheet["title"],
+                    "sheet_number": sheet_number,
+
+                    "title": sheet_title,
 
                     "image": (
-                        f"data:image/png;base64,"
-                        f"{image_base64}"
+                        "data:image/png;base64,"
+                        + image_base64
                     )
                 }
             )
 
 
         # ------------------------------------------
-        # STEP 7:
+        # STEP 8: SUCCESS
+        # ------------------------------------------
+
+        print("\n========================================")
+        print("DASHBOARD GENERATION COMPLETED")
+        print("========================================")
+
+        print(
+            f"Total sheets generated: "
+            f"{len(response_sheets)}"
+        )
+
+
+        # ------------------------------------------
         # RETURN COMPLETE RESPONSE
         # ------------------------------------------
 
@@ -287,8 +399,12 @@ async def generate_dashboard(
 
     except Exception as e:
 
+        print("\n========================================")
+        print("ERROR DURING DASHBOARD GENERATION")
+        print("========================================")
+
         print(
-            f"ERROR: {str(e)}"
+            f"Error: {str(e)}"
         )
 
         raise HTTPException(
