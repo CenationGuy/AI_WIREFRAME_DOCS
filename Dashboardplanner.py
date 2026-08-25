@@ -13,10 +13,6 @@ LOCATION = "us-central1"
 
 MODEL_NAME = "gemini-2.5-flash"
 
-PROFILE_FILE = "data_profile.json"
-
-OUTPUT_FILE = "dashboard_spec.json"
-
 
 # =========================================================
 # GEMINI LLM
@@ -32,32 +28,16 @@ llm = ChatGoogleGenerativeAI(
 
 
 # =========================================================
-# LOAD DATA PROFILE
+# CREATE DASHBOARD PLAN
 # =========================================================
 
-with open(PROFILE_FILE, "r") as file:
-    data_profile = json.load(file)
+def create_dashboard_plan(data_profile):
 
+    # =====================================================
+    # BUILD PROMPT
+    # =====================================================
 
-print("========================================================")
-print("DATA PROFILE LOADED SUCCESSFULLY")
-print("========================================================")
-
-print("\nDimensions:")
-print(data_profile["dimensions"])
-
-print("\nDate dimensions:")
-print(data_profile["date_dimensions"])
-
-print("\nMeasures:")
-print(data_profile["measures"])
-
-
-# =========================================================
-# BUILD PROMPT FOR DASHBOARD PLANNER
-# =========================================================
-
-prompt = f"""
+    prompt = f"""
 You are an expert dashboard planner.
 
 Your job is to analyze the dataset profile below and create a
@@ -144,55 +124,26 @@ Return JSON in exactly this structure:
 """
 
 
-print("\n========================================================")
-print("PROMPT CREATED SUCCESSFULLY")
-print("========================================================")
+    # =====================================================
+    # CALL GEMINI
+    # =====================================================
+
+    response = llm.invoke(prompt)
+
+    dashboard_spec_text = response.content
 
 
-# =========================================================
-# GENERATE DASHBOARD SPECIFICATION
-# =========================================================
+    # =====================================================
+    # CONVERT RESPONSE TO PYTHON DICTIONARY
+    # =====================================================
 
-print("\nGENERATING DASHBOARD SPECIFICATION...\n")
-
-response = llm.invoke(prompt)
-
-
-# =========================================================
-# GET LLM RESPONSE
-# =========================================================
-
-dashboard_spec_text = response.content
-
-
-print("========================================================")
-print("DASHBOARD PLAN GENERATED")
-print("========================================================\n")
-
-print(dashboard_spec_text)
-
-
-# =========================================================
-# CONVERT LLM RESPONSE TO JSON
-# =========================================================
-
-dashboard_spec = json.loads(dashboard_spec_text)
-
-
-# =========================================================
-# SAVE DASHBOARD SPECIFICATION
-# =========================================================
-
-with open(OUTPUT_FILE, "w") as file:
-    json.dump(
-        dashboard_spec,
-        file,
-        indent=4
+    dashboard_spec = json.loads(
+        dashboard_spec_text
     )
 
 
-print("\n========================================================")
-print("DASHBOARD SPECIFICATION GENERATED SUCCESSFULLY")
-print("========================================================")
+    # =====================================================
+    # RETURN RESULT TO main.py
+    # =====================================================
 
-print(f"\nSaved to: {OUTPUT_FILE}")
+    return dashboard_spec
