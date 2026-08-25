@@ -3,13 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import pandas as pd
 import io
+import base64
+from io import BytesIO
+
 
 # ==================================================
-# IMPORT OUR BACKEND COMPONENTS
+# IMPORT BACKEND COMPONENTS
 # ==================================================
 
 from csv_profiler import profile_csv_dataframe
 from dashboard_planner import create_dashboard_plan
+from dashboard_summarizer import generate_dashboard_summary
+from visual_designer import generate_dashboard_design
 
 
 # ==================================================
@@ -24,8 +29,7 @@ app = FastAPI(
 # ==================================================
 # CORS
 #
-# Allows the React frontend to communicate with
-# the FastAPI backend.
+# Allows React frontend to communicate with FastAPI
 # ==================================================
 
 app.add_middleware(
@@ -50,25 +54,67 @@ def home():
 
 
 # ==================================================
-# GENERATE DASHBOARD
+# CONVERT PIL IMAGE TO BASE64
 #
-# COMPLETE CURRENT FLOW:
+# React cannot directly receive a PIL Image object.
 #
-# User uploads CSV
-#        ↓
-# FastAPI receives file
-#        ↓
-# Pandas reads CSV
-#        ↓
-# CSV Profiler analyzes dataset
-#        ↓
-# data_profile
-#        ↓
-# Dashboard Planner sends profile to Gemini
-#        ↓
-# dashboard_spec
-#        ↓
-# Return result
+# So:
+#
+# PIL Image
+#     ↓
+# PNG bytes
+#     ↓
+# Base64 string
+#     ↓
+# JSON response
+# ==================================================
+
+def image_to_base64(image):
+
+    buffer = BytesIO()
+
+    image.save(
+        buffer,
+        format="PNG"
+    )
+
+    image_bytes = buffer.getvalue()
+
+    base64_string = base64.b64encode(
+        image_bytes
+    ).decode("utf-8")
+
+    return base64_string
+
+
+# ==================================================
+# GENERATE DASHBOARD ENDPOINT
+#
+# COMPLETE PIPELINE:
+#
+# CSV
+#  ↓
+# Pandas DataFrame
+#  ↓
+# CSV Profiler
+#  ↓
+# Data Profile
+#  ↓
+# Dashboard Planner
+#  ↓
+# Multi-Sheet Dashboard Specification
+#  ↓
+# ├── Dashboard Summarizer
+# │       ↓
+# │   Text Summary
+# │
+# └── Visual Designer
+#         ↓
+#     One Image Per Sheet
+#         ↓
+#     Base64 Conversion
+#  ↓
+# Final API Response
 # ==================================================
 
 @app.post("/generate-dashboard")
@@ -91,7 +137,8 @@ async def generate_dashboard(
     try:
 
         # ------------------------------------------
-        # READ UPLOADED CSV
+        # STEP 1:
+        # READ CSV
         # ------------------------------------------
 
         contents = await file.read()
@@ -102,11 +149,11 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 1:
-        # PROFILE THE CSV
+        # STEP 2:
+        # PROFILE CSV
         #
-        # df
-        # ↓
+        # DataFrame
+        #     ↓
         # data_profile
         # ------------------------------------------
 
@@ -116,13 +163,13 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 2:
+        # STEP 3:
         # CREATE DASHBOARD PLAN
         #
         # data_profile
-        # ↓
+        #     ↓
         # Gemini
-        # ↓
+        #     ↓
         # dashboard_spec
         # ------------------------------------------
 
@@ -132,20 +179,105 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # RETURN FINAL RESPONSE
+        # STEP 4:
+        # GENERATE DASHBOARD SUMMARY
+        #
+        # dashboard_spec
+        #     ↓
+        # text summary
+        # ------------------------------------------
+
+        dashboard_summary = generate_dashboard_summary(
+            dashboard_spec
+        )
+
+
+        # ------------------------------------------
+        # STEP 5:
+        # GENERATE DASHBOARD DESIGNS
+        #
+        # Each sheet gets its own generated image
+        #
+        # dashboard_spec
+        #     ↓
+        # visual_designer.py
+        #     ↓
+        # PIL Images
+        # ------------------------------------------
+
+        generated_sheets = generate_dashboard_design(
+            dashboard_spec
+        )
+
+
+        # ------------------------------------------
+        # STEP 6:
+        # CONVERT ALL IMAGES TO BASE64
+        # ------------------------------------------
+
+        response_sheets = []
+
+        for sheet in generated_sheets:
+
+            image_base64 = image_to_base64(
+                sheet["image"]
+            )
+
+            response_sheets.append(
+                {
+                    "sheet_number": sheet["sheet_number"],
+                    "title": sheet["title"],
+
+                    "image": (
+                        f"data:image/png;base64,"
+                        f"{image_base64}"
+                    )
+                }
+            )
+
+
+        # ------------------------------------------
+        # STEP 7:
+        # RETURN COMPLETE RESPONSE
         # ------------------------------------------
 
         return {
 
             "status": "success",
 
-            "message": "Dashboard plan generated successfully",
+            "message": (
+                "Dashboard generated successfully"
+            ),
 
             "filename": file.filename,
 
+
+            # ----------------------------------
+            # CSV ANALYSIS
+            # ----------------------------------
+
             "data_profile": data_profile,
 
-            "dashboard_spec": dashboard_spec
+
+            # ----------------------------------
+            # DASHBOARD PLAN
+            # ----------------------------------
+
+            "dashboard_spec": dashboard_spec,
+
+
+            # ----------------------------------
+            # TEXT SUMMARY
+            # ----------------------------------
+
+            "dashboard_summary": dashboard_summary,
+
+
+            # ----------------------------------
+            # GENERATED DASHBOARD SHEETS
+            # ----------------------------------
+
+            "generated_sheets": response_sheets
         }
 
 
@@ -154,6 +286,10 @@ async def generate_dashboard(
     # ----------------------------------------------
 
     except Exception as e:
+
+        print(
+            f"ERROR: {str(e)}"
+        )
 
         raise HTTPException(
             status_code=500,
