@@ -1,0 +1,100 @@
+RETRIEVED SAC STANDARDS
+============================================
+
+--- Result 1 ---
+Page: 4
+Chunk: 1
+Make optimal use of screen-
+estate & data-to-ink ratio
+Emphasize important through 
+position & size
+Position KPI box aligned with 
+supporting visuals
+Use neutral colour for anything 
+without threshold or good/bad 
+RAG colour
+Make it clear if a KPI box is 
+interactive and or selectable
+Summarise with a super-KPI if 
+there are too many KPIs to digest
+Duplicate/repeat where avoidable
+Use redundant distracting colours
+Use non-functional icons (functional icons are those that are universally understood and recognized 
+but also used repeatedly across same and multiple apps (like Home, Info, Next, Previous, Zoom in
+/out etc)
+Use excessive precision (for example too many decimal points)
+Show include elaborate visuals with legends and data-points inside a KPI box (it’s not a mini 
+dashboard)
+Show too many separate metrics that can be combined to create fewer, better KPIs
+-
+Container tabs
+Follow the following format (sample in Foundation BPD app):
+The icons on the tabs are optional. Please refrain from using them if they do not add information. For example, if you have three bar charts inside the 
+container, there is no added value of showing three bar chart symbols.
+Buttons
+
+--- Result 2 ---
+Page: 18
+Chunk: 3
+or having an icon   on the top right corner (indicating the clicking on the KPI will re-direct you to another sheet).
+A summary ( s and s) of KPI design recommendations useful when modifying the standard design can be found in Do Don't 1.1.2.3. KPI Box 
+recommendations
+KPI location
+For displaying multiple measures horizontal or vertical banners should attach horizontally over the top or vertically on the left. Optional visual cue will 
+indicate level of drill/filtering of the current selection.
+
+--- Result 3 ---
+Page: 3
+Chunk: 1
+KPI Boxes with two targets
+If, and only if, there is a strong and sensible need from the customers to compare a measure against TWO targets, rather than one target, then the 
+following KPI box can be used.
+Colouring goes to the vs Target1 and vs Target 2 values.
+Drivers arrows and colouring similar to our standard preferred KPI box. 
+KPI Box recommendations
+Do Don't
+
+--- Result 4 ---
+Page: 1
+Chunk: 1
+03. Front-End - General Concepts (READ ME!)
+Our visualisation standards can be categorised into three main groups: Fixed, Flex and Free. 
+ 
+Fixed (non-negotiable)
+Standards used in this category are non-negotiable.
+Standards contained in iView Template
+The template must be used in order to adhere to latest backend and frontend standards. Find the location of the templates for the different platforms 
+below:
+Platform Template Front End Standards
+Qlik Qlik Vodafone Templates Qlik Standards - Group Data & Analytics - Vodafone Global Confluence
+Power BI
+Tableau 
+SAC In SAC 03.4. SAC Standards - Group Data & Analytics - Vodafone Global Confluence
+Sheet Menu
+A sheet menu is a navigation extension that allows for the user to have all the necessary standard settings introduced on an application. More 
+information on how the sheet menu has been configured in the iView Template is on Qlik Standards - Group Data & Analytics - Vodafone Global 
+Confluence
+KPI Box design
+KPI box is a simple visual cue to communicate the amount of progress made towards a measurable goal or . Our standard KPI box and the related KPI
+elements are illustrated below:
+
+--- Result 5 ---
+Page: 2
+Chunk: 1
+How to identify a KPI
+First questions to be made are:
+What am I ahead or behind on?
+How far am I ahead or behind?
+A KPI requires a and a as well as a  (indicating tolerances like 'red/amber/green')or a (in case of  base measure   target measure   threshold   goal   
+cumulative target like total sum of sales at end of year), 
+KPIs will always have a target and often they combine multiple measures. For example, you would need to know that 70 people have left voluntarily 
+but also that headcount is 1000 in order to simply state 7% voluntary attrition. Similarly, if the main purpose of financial control is to ensure spending is 
+in line with budget it's not most important to see where the biggest spend is but instead where the biggest variance.
+How to identify which number to show where, i.e. what is target, what is driver etc.
+First ask yourself what is the target set on? That metric you will give you 2 first numbers (actual and target)
+Then ask yourself is there a threshold or is there only a binary performance measurement (target met/target not met). This will determine 
+your Red-Black or Red-Amber-Black colouring. *don't show green for performing on target.
+
+============================================
+SAC RAG PIPELINE COMPLETE
+============================================
