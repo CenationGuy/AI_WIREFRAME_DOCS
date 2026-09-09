@@ -426,3 +426,113 @@ if __name__ == "__main__":
     print("\n============================================")
     print("SAC RAG PIPELINE COMPLETE")
     print("============================================")
+
+
+
+
+
+
+
+python Sac_rag.py 
+
+============================================
+SAC RAG PIPELINE
+============================================
+
+============================================
+STEP 1 - PDF EXTRACTION
+============================================
+PDF loaded successfully.
+Total pages: 20
+Page 1: 1149 characters
+Page 2: 2732 characters
+Page 3: 368 characters
+Page 4: 2012 characters
+Page 5: 579 characters
+Page 7: 40 characters
+Page 8: 38 characters
+Page 9: 3 characters
+Page 10: 30 characters
+Page 11: 471 characters
+Page 12: 103 characters
+Page 13: 1006 characters
+Page 14: 2667 characters
+Page 15: 1750 characters
+Page 16: 1999 characters
+Page 17: 953 characters
+Page 18: 2425 characters
+Page 19: 2268 characters
+Page 20: 954 characters
+
+Pages extracted: 19
+
+============================================
+STEP 2 - TEXT CHUNKING
+============================================
+Total chunks created: 30
+
+============================================
+STEP 3 - CREATING EMBEDDINGS
+============================================
+Chroma collection: sac_standards
+Existing vectors: 0
+Embedding chunk 1/30
+Traceback (most recent call last):
+  File "/home/abhisheks_s/ai_wireframe/backend/rag/Sac_rag.py", line 404, in <module>
+    create_vector_database(
+  File "/home/abhisheks_s/ai_wireframe/backend/rag/Sac_rag.py", line 230, in create_vector_database
+    embedding = generate_embedding(
+                ^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/ai_wireframe/backend/rag/Sac_rag.py", line 175, in generate_embedding
+    response = client.models.embed_content(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/models.py", line 6471, in embed_content
+    return self._embed_content(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/models.py", line 5257, in _embed_content
+    response = self._api_client.request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1708, in request
+    response = self._request(http_request, http_options, stream=False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1495, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/tenacity/__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1424, in _request_once
+    http_request.headers['Authorization'] = f'Bearer {self._access_token()}'
+                                                      ^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 1269, in _access_token
+    return get_token_from_credentials(self, self._credentials)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 2318, in get_token_from_credentials
+    refresh_auth(credentials)
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/genai/_api_client.py", line 218, in refresh_auth
+    credentials.refresh(Request())  # type: ignore[no-untyped-call]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/auth/credentials.py", line 517, in refresh
+    self._perform_refresh_token(request)
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/auth/compute_engine/credentials.py", line 146, in _perform_refresh_token
+    self._retrieve_info(request)
+  File "/home/abhisheks_s/.venv/lib/python3.12/site-packages/google/auth/compute_engine/credentials.py", line 119, in _retrieve_info
+    raise exceptions.RefreshError(
+google.auth.exceptions.RefreshError: Unexpected response from metadata server: service account info is missing 'email' field.
