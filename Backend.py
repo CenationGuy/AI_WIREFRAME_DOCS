@@ -18,6 +18,9 @@ from dashboard_planner import create_dashboard_plan
 from dashboard_summarizer import generate_dashboard_summary
 from visual_designer import generate_dashboard_design
 
+# SAC RAG
+from rag.Sac_rag import retrieve_sac_standards
+
 
 # ==================================================
 # FASTAPI APP
@@ -95,6 +98,10 @@ def image_to_base64(image):
 # CSV Profiler
 #  ↓
 # Data Profile
+#  ↓
+# SAC RAG
+#  ↓
+# Relevant SAC Standards
 #  ↓
 # Dashboard Planner
 #  ↓
@@ -186,15 +193,43 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 3: CREATE DASHBOARD PLAN
+        # STEP 3: RETRIEVE SAC STANDARDS
         # ------------------------------------------
 
         print("\n========================================")
-        print("STEP 3: CREATING DASHBOARD PLAN")
+        print("STEP 3: RETRIEVING SAC STANDARDS")
+        print("========================================")
+
+        sac_query = (
+            "Enterprise dashboard design standards "
+            "for KPI boxes, KPI selection, charts, "
+            "filters, layout, visual hierarchy, "
+            "colours, interaction, navigation, "
+            "screen estate and dashboard usability."
+        )
+
+        sac_standards = retrieve_sac_standards(
+            sac_query,
+            top_k=5
+        )
+
+        print(
+            f"Retrieved {len(sac_standards)} "
+            "SAC standard chunks."
+        )
+
+
+        # ------------------------------------------
+        # STEP 4: CREATE DASHBOARD PLAN
+        # ------------------------------------------
+
+        print("\n========================================")
+        print("STEP 4: CREATING DASHBOARD PLAN")
         print("========================================")
 
         dashboard_spec = create_dashboard_plan(
-            data_profile
+            data_profile,
+            sac_standards
         )
 
         print(
@@ -213,11 +248,11 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 4: GENERATE DASHBOARD SUMMARY
+        # STEP 5: GENERATE DASHBOARD SUMMARY
         # ------------------------------------------
 
         print("\n========================================")
-        print("STEP 4: GENERATING DASHBOARD SUMMARY")
+        print("STEP 5: GENERATING DASHBOARD SUMMARY")
         print("========================================")
 
         dashboard_summary = generate_dashboard_summary(
@@ -230,11 +265,11 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 5: GENERATE DASHBOARD IMAGES
+        # STEP 6: GENERATE DASHBOARD IMAGES
         # ------------------------------------------
 
         print("\n========================================")
-        print("STEP 5: GENERATING DASHBOARD IMAGES")
+        print("STEP 6: GENERATING DASHBOARD IMAGES")
         print("========================================")
 
         generated_sheets = generate_dashboard_design(
@@ -248,11 +283,11 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 6: CREATE IMAGE OUTPUT FOLDER
+        # STEP 7: CREATE IMAGE OUTPUT FOLDER
         # ------------------------------------------
 
         print("\n========================================")
-        print("STEP 6: SAVING GENERATED IMAGES")
+        print("STEP 7: SAVING GENERATED IMAGES")
         print("========================================")
 
         os.makedirs(
@@ -262,7 +297,7 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 7:
+        # STEP 8:
         #
         # SAVE EACH IMAGE
         # +
@@ -336,7 +371,7 @@ async def generate_dashboard(
 
 
         # ------------------------------------------
-        # STEP 8: SUCCESS
+        # STEP 9: SUCCESS
         # ------------------------------------------
 
         print("\n========================================")
@@ -369,6 +404,13 @@ async def generate_dashboard(
             # ----------------------------------
 
             "data_profile": data_profile,
+
+
+            # ----------------------------------
+            # RETRIEVED SAC STANDARDS
+            # ----------------------------------
+
+            "sac_standards": sac_standards,
 
 
             # ----------------------------------
