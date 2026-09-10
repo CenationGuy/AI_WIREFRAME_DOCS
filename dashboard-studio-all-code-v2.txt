@@ -1,0 +1,823 @@
+============================================================================
+DASHBOARD STUDIO — ALL FILES (v2, matches your real backend)
+============================================================================
+Your backend is UNTOUCHED. The generateDashboard() function in App.jsx is
+exactly yours: POST /api/generate-dashboard, multipart "file", reads
+errorData.detail, updates the session title from
+response.dashboard_spec.dashboard_title.
+
+The preview now renders your REAL response:
+  result.generated_sheets = [ { sheet_number, title, image }, ... ]
+  result.dashboard_spec.dashboard_title
+  result.dashboard_summary
+
+WHAT GOES WHERE (each section is one file):
+  - ChatAssistant.jsx  ->  NEW file (create it)
+  - everything else    ->  REPLACE your existing file
+  - tailwind.config.js / postcss.config.js  ->  unchanged (not included)
+
+NOTES
+  - The chatbot calls POST /api/chat  { messages:[{role,content}] } -> { reply }
+    (same /api proxy as your generate call — no CORS or URL changes needed).
+  - DashboardPreview.jsx is no longer used (your output is real images), so you
+    can delete it. If nothing else uses recharts, you can uninstall it too.
+============================================================================
+
+
+############################################################################
+FILE: src/index.css   (REPLACE)
+############################################################################
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');
+
+:root { color-scheme: light; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: 'Figtree', system-ui, -apple-system, sans-serif; letter-spacing: -0.01em; }
+
+/* Vodafone red gradient (buttons, avatars, active states) */
+.vf-red-grad { background: linear-gradient(155deg, #ff2b2b, #E60000 60%, #B30000); }
+
+/* loading shimmer */
+@keyframes vf-shimmer { 100% { transform: translateX(100%); } }
+.vf-shimmer { position: relative; overflow: hidden; }
+.vf-shimmer::after { content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent); animation:vf-shimmer 1.3s infinite; }
+
+/* chat launcher pulse */
+@keyframes vf-ping { 0% { transform: scale(1); opacity:.55 } 100% { transform: scale(1.12); opacity:0 } }
+.vf-ping { animation: vf-ping 2.6s ease-out infinite; }
+
+/* entrances */
+@keyframes vf-slide { from { opacity:0; transform:translateY(18px) scale(.97) } to { opacity:1; transform:none } }
+.vf-slide { animation: vf-slide .26s cubic-bezier(.16,1,.3,1) both; }
+@keyframes vf-nudge { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:none } }
+.vf-nudge { animation: vf-nudge .42s cubic-bezier(.16,1,.3,1) both; }
+@keyframes vf-fadeup { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
+.vf-fadeup { animation: vf-fadeup .4s ease both; }
+
+/* typing dots */
+@keyframes vf-bounce { 0%,60%,100% { transform:translateY(0); opacity:.5 } 30% { transform:translateY(-4px); opacity:1 } }
+.vf-dot { animation: vf-bounce 1.2s infinite; }
+
+*::-webkit-scrollbar { width:8px; height:8px; }
+*::-webkit-scrollbar-thumb { background:#dbe2ea; border-radius:8px; }
+
+@media (prefers-reduced-motion: reduce) { * { animation:none!important; transition:none!important; } }
+
+
+############################################################################
+FILE: src/components/Step.jsx   (REPLACE)
+############################################################################
+
+import { Check } from "lucide-react";
+
+export default function Step({ n, label, hint, filled, last, children }) {
+  return (
+    <div className={"relative py-4 pl-10 " + (last ? "" : "border-b border-slate-100")}>
+      <span
+        className={
+          "absolute left-0 top-4 grid h-6 w-6 place-items-center rounded-lg text-xs font-bold " +
+          (filled ? "vf-red-grad text-white" : "border-[1.5px] border-[#ffd0d0] bg-white text-[#E60000]")
+        }
+      >
+        {filled ? <Check size={13} /> : n}
+      </span>
+      {!last && <span className="absolute bottom-0 left-[11px] top-10 w-px bg-slate-200" />}
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[13px] font-semibold text-slate-800">{label}</span>
+        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+
+############################################################################
+FILE: src/components/Sidebar.jsx   (REPLACE)
+############################################################################
+
+import { Plus, Search, LayoutDashboard, FileText } from "lucide-react";
+
+const GROUPS = ["Today", "Yesterday", "Previous 7 days"];
+
+export default function Sidebar({ sessions, activeId, query, onQuery, onSelect, onNew }) {
+  return (
+    <aside className="hidden w-[270px] flex-col border-r border-slate-200 bg-white md:flex">
+      <div className="flex items-center gap-3 px-[18px] pb-3.5 pt-[18px]">
+        <div className="vf-red-grad grid h-[38px] w-[38px] place-items-center rounded-xl text-white shadow-[0_6px_16px_-6px_rgba(230,0,0,0.55)]">
+          <LayoutDashboard size={19} />
+        </div>
+        <div>
+          <div className="text-[15px] font-extrabold leading-tight text-slate-900">Dashboard Studio</div>
+          <div className="text-[11.5px] font-medium text-slate-400">Market analytics</div>
+        </div>
+        <span className="ml-auto rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9.5px] font-bold text-[#E60000]">BETA</span>
+      </div>
+
+      <button
+        onClick={onNew}
+        className="vf-red-grad mx-3.5 flex items-center justify-center gap-2 rounded-xl py-2.5 text-[13.5px] font-semibold text-white shadow-[0_8px_18px_-8px_rgba(230,0,0,0.6)] transition hover:-translate-y-px"
+      >
+        <Plus size={16} /> New dashboard
+      </button>
+
+      <div className="relative mx-3.5 mt-3.5">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          placeholder="Search dashboards"
+          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-[13px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000] focus:bg-white focus:ring-[3px] focus:ring-[#ffe4e4]"
+        />
+      </div>
+
+      <nav className="mt-1.5 flex-1 overflow-y-auto px-2 pb-3">
+        {GROUPS.map((g) => {
+          const rows = sessions.filter(
+            (s) => s.when === g && s.title.toLowerCase().includes(query.toLowerCase())
+          );
+          if (!rows.length) return null;
+          return (
+            <div key={g}>
+              <div className="px-2.5 pb-1.5 pt-3.5 text-[11px] font-semibold text-slate-400">{g}</div>
+              {rows.map((s) => {
+                const on = s.id === activeId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onSelect(s.id)}
+                    className={
+                      "relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px] transition " +
+                      (on ? "bg-rose-50 font-semibold text-[#E60000]" : "text-slate-600 hover:bg-slate-100")
+                    }
+                  >
+                    {on && <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded bg-[#E60000]" />}
+                    <FileText size={15} className={on ? "text-[#E60000]" : "text-slate-400"} />
+                    <span className="flex-1 truncate">{s.title}</span>
+                    <span className={"rounded px-1.5 py-0.5 text-[10px] font-bold " + (on ? "bg-rose-200 text-[#E60000]" : "bg-slate-100 text-slate-500")}>{s.market}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+
+############################################################################
+FILE: src/components/TopBar.jsx   (REPLACE)
+############################################################################
+
+import { ChevronRight, Bell } from "lucide-react";
+
+export default function TopBar({ title }) {
+  return (
+    <header className="flex h-14 flex-shrink-0 items-center gap-2 border-b border-slate-200 bg-white/85 px-6 backdrop-blur">
+      <div className="flex items-center gap-1.5 text-[12.5px] text-slate-400">
+        Workspaces <ChevronRight size={14} /> <b className="font-semibold text-slate-900">{title}</b>
+        <span className="ml-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-700">Draft</span>
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <button className="grid h-[34px] w-[34px] place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">
+          <Bell size={16} />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+
+############################################################################
+FILE: src/components/GeneratorForm.jsx   (REPLACE)
+############################################################################
+
+import { UploadCloud, Sparkles, FileSpreadsheet, X, Wand2 } from "lucide-react";
+import Step from "./Step.jsx";
+
+const PERSONAS = ["Executive", "Analyst", "Operations", "Finance"];
+const TOOLS = [
+  { id: "power_bi", name: "Power BI", vendor: "Microsoft", dot: "#f59e0b" },
+  { id: "qlik", name: "Qlik Sense", vendor: "Qlik", dot: "#10b981" },
+  { id: "sac", name: "SAP Analytics", vendor: "SAC", dot: "#00B0CA" },
+];
+const SUGGESTIONS = ["Revenue KPI", "Regional split", "Top 5 products", "Churn trend"];
+
+export default function GeneratorForm({
+  persona, setPersona, tool, setTool, file, setFile,
+  instructions, setInstructions, phase, onGenerate,
+}) {
+  const onPick = (e) => { if (e.target.files[0]) setFile(e.target.files[0]); };
+  const kb = file ? Math.max(1, Math.round(file.size / 1024)) : 0;
+
+  return (
+    <div>
+      <p className="text-[13.5px] font-bold text-slate-800">Configuration</p>
+      <p className="mb-1 text-[12.5px] text-slate-400">Set the inputs, then generate.</p>
+
+      {/* 1 - Dataset */}
+      <Step n="1" label="Dataset" hint="CSV up to 50 MB" filled={!!file}>
+        {!file ? (
+          <label className="group flex w-full cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-dashed border-slate-300 bg-slate-50/60 p-3 transition hover:border-[#E60000] hover:bg-rose-50/30">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-[#E60000] shadow-sm">
+              <UploadCloud size={17} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold text-slate-800">Choose a CSV file</span>
+              <span className="block text-[11.5px] text-slate-400">Schema profiled automatically</span>
+            </span>
+            <input type="file" accept=".csv" hidden onChange={onPick} />
+          </label>
+        ) : (
+          <div className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white">
+                <FileSpreadsheet size={16} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold text-emerald-900">{file.name}</span>
+                <span className="block text-[11px] text-emerald-700/80">{kb.toLocaleString()} KB · ready</span>
+              </span>
+            </div>
+            <button onClick={() => setFile(null)} className="shrink-0 rounded p-1 text-emerald-700/70 hover:bg-emerald-100 hover:text-emerald-800">
+              <X size={15} />
+            </button>
+          </div>
+        )}
+      </Step>
+
+      {/* 2 - Persona */}
+      <Step n="2" label="Target Persona" hint="Audience" filled={!!persona}>
+        <div className="grid grid-cols-4 gap-1.5">
+          {PERSONAS.map((p) => {
+            const on = p === persona;
+            return (
+              <button
+                key={p}
+                onClick={() => setPersona(p)}
+                className={
+                  "rounded-lg py-1.5 text-center text-[12.5px] font-medium transition " +
+                  (on ? "vf-red-grad font-semibold text-white shadow-sm" : "border border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-white")
+                }
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 3 - Target BI Tool */}
+      <Step n="3" label="Target BI Tool" hint="Visual style" filled={!!tool}>
+        <div className="grid grid-cols-3 gap-1.5">
+          {TOOLS.map((t) => {
+            const on = t.id === tool;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTool(t.id)}
+                className={
+                  "rounded-xl border p-2.5 text-left transition " +
+                  (on ? "border-[#E60000] bg-rose-50/30 ring-1 ring-[#E60000]" : "border-slate-200 bg-slate-50/40 hover:bg-white")
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ background: t.dot }} />
+                  <span className="text-[12.5px] font-semibold text-slate-800">{t.name}</span>
+                </div>
+                <div className="mt-0.5 text-[10.5px] text-slate-400">{t.vendor}</div>
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 4 - Instructions */}
+      <Step n="4" label="Prompt & Instructions" hint="Plain text" filled={instructions.trim().length > 0} last>
+        <textarea
+          rows={3}
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder="e.g. Total revenue KPI, regional bar chart, top 5 products, churn trend."
+          className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/40 p-3 text-[13px] leading-relaxed text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#E60000] focus:bg-white focus:ring-[3px] focus:ring-[#ffe4e4]"
+        />
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {SUGGESTIONS.map((s) => (
+            <button key={s} onClick={() => setInstructions((v) => (v ? v + ", " + s : s))}
+              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-500 transition hover:border-[#E60000] hover:text-[#E60000]">
+              + {s}
+            </button>
+          ))}
+        </div>
+      </Step>
+
+      <button
+        onClick={onGenerate}
+        disabled={phase === "working"}
+        className="vf-red-grad mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-[0_12px_26px_-10px_rgba(230,0,0,0.65)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+      >
+        {phase === "working" ? <><Sparkles size={15} className="animate-spin" /> Generating Wireframe…</> : <><Wand2 size={15} /> Generate Wireframe</>}
+      </button>
+    </div>
+  );
+}
+
+
+############################################################################
+FILE: src/components/PreviewPanel.jsx   (REPLACE — renders your real sheets)
+############################################################################
+
+import { useState, useEffect } from "react";
+import { Download, LayoutDashboard, Sparkles, FileText, Image as ImageIcon } from "lucide-react";
+
+const TOOL_LABELS = { power_bi: "Power BI", qlik: "Qlik Sense", sac: "SAP Analytics" };
+
+export default function PreviewPanel({ phase, result, error, tool, persona }) {
+  const [selectedSheet, setSelectedSheet] = useState(0);
+
+  // Reset to first sheet whenever a new result arrives
+  useEffect(() => { setSelectedSheet(0); }, [result]);
+
+  const sheets = result?.generated_sheets || [];
+  const current = sheets[selectedSheet];
+
+  const download = () => {
+    if (!current?.image) return;
+    const a = document.createElement("a");
+    a.href = current.image;
+    a.download = `dashboard-sheet-${current.sheet_number}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className="flex flex-col">
+      {/* Header bar */}
+      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-5 py-3.5">
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">Canvas Preview</h2>
+          <p className="mt-0.5 text-[11.5px] text-slate-400">
+            {phase === "done" ? `${TOOL_LABELS[tool]} · ${persona}` : "Your generated dashboard appears here"}
+          </p>
+        </div>
+        {phase === "done" && current && (
+          <button onClick={download} className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <Download size={13} /> Export PNG
+          </button>
+        )}
+      </div>
+
+      {/* IDLE */}
+      {phase === "idle" && (
+        <div className="m-4 flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/40 p-10 text-center">
+          <div className="grid h-[52px] w-[52px] place-items-center rounded-2xl bg-white text-[#E60000] shadow-[0_8px_20px_-8px_rgba(15,23,42,0.18)]">
+            <LayoutDashboard size={22} />
+          </div>
+          <h3 className="mt-4 text-[15px] font-bold text-slate-800">Nothing generated yet</h3>
+          <p className="mt-1.5 max-w-xs text-[13px] text-slate-500">Upload a CSV and hit Generate to build an AI-powered dashboard.</p>
+        </div>
+      )}
+
+      {/* WORKING (shimmer skeleton) */}
+      {phase === "working" && (
+        <div className="p-4">
+          <div className="mb-3 grid grid-cols-3 gap-3">
+            <div className="vf-shimmer h-[74px] rounded-xl bg-slate-100" />
+            <div className="vf-shimmer h-[74px] rounded-xl bg-slate-100" />
+            <div className="vf-shimmer h-[74px] rounded-xl bg-slate-100" />
+          </div>
+          <div className="mb-3 grid grid-cols-[1.5fr_1fr] gap-3">
+            <div className="vf-shimmer h-[150px] rounded-xl bg-slate-100" />
+            <div className="vf-shimmer h-[150px] rounded-xl bg-slate-100" />
+          </div>
+          <div className="vf-shimmer h-[170px] rounded-xl bg-slate-100" />
+          <div className="mt-4 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-slate-700">
+            <Sparkles size={15} className="animate-spin text-[#E60000]" /> Analyzing your CSV and generating dashboard designs…
+          </div>
+        </div>
+      )}
+
+      {/* ERROR */}
+      {phase === "error" && (
+        <div className="m-4 rounded-xl border border-rose-200 bg-rose-50/60 p-4 text-[13px] text-rose-700">
+          <span className="font-semibold">Generation Failed: </span>{error}
+        </div>
+      )}
+
+      {/* DONE */}
+      {phase === "done" && result && (
+        <div className="vf-fadeup space-y-5 p-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">
+              {result.dashboard_spec?.dashboard_title || "Generated dashboard"}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              {sheets.length} dashboard sheet{sheets.length !== 1 ? "s" : ""} generated
+            </p>
+          </div>
+
+          {sheets.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+              {sheets.map((s, i) => {
+                const on = selectedSheet === i;
+                return (
+                  <button
+                    key={s.sheet_number}
+                    onClick={() => setSelectedSheet(i)}
+                    className={
+                      "rounded-lg px-3 py-2 text-xs font-medium transition " +
+                      (on ? "vf-red-grad text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50")
+                    }
+                  >
+                    Sheet {s.sheet_number}: {s.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {current && (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3">
+                <ImageIcon size={15} className="text-[#E60000]" />
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800">{current.title}</h3>
+                  <p className="text-[10.5px] text-slate-400">AI-generated dashboard design</p>
+                </div>
+              </div>
+              <div className="bg-slate-100 p-3">
+                <img src={current.image} alt={current.title} className="h-auto w-full rounded-lg" />
+              </div>
+            </div>
+          )}
+
+          {result.dashboard_summary && (
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-[#E60000]" />
+                <h3 className="text-sm font-semibold text-slate-800">Dashboard summary</h3>
+              </div>
+              <div className="mt-3 whitespace-pre-line text-[13px] leading-6 text-slate-600">
+                {result.dashboard_summary}
+              </div>
+            </div>
+          )}
+
+          {sheets.length === 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-700">
+              Dashboard generation completed, but no sheet images were returned.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+############################################################################
+FILE: src/components/ChatAssistant.jsx   (NEW FILE — create this)
+############################################################################
+
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, Sparkles, X, Bot, Send, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+
+// Uses the SAME /api proxy as your generate call.
+const CHAT_ENDPOINT = "/api/chat";
+const SUGGESTIONS = [
+  "What KPIs suit an Executive view?",
+  "Best chart for churn over time?",
+  "How should I lay out regional sales?",
+  "Power BI or SAP Analytics for this?",
+];
+
+// POST /api/chat  { messages:[{role,content}] }  ->  { reply:"..." }
+async function askAssistant(messages) {
+  const res = await fetch(CHAT_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+  if (!res.ok) throw new Error("bad status");
+  const data = await res.json();
+  return (data.reply || data.content || data.message || "").trim();
+}
+
+function renderRich(text, isUser) {
+  return text.split("\n").map((line, i) => {
+    if (line.trim() === "") return <div key={i} className="h-1.5" />;
+    const bullet = /^\s*[-*]\s+/.test(line);
+    const clean = line.replace(/^\s*[-*]\s+/, "");
+    const parts = clean.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((p, j) => {
+      if (p.startsWith("**") && p.endsWith("**")) return <strong key={j} className="font-bold">{p.slice(2, -2)}</strong>;
+      if (p.startsWith("`") && p.endsWith("`")) return <code key={j} className={"rounded px-1.5 py-0.5 font-mono text-[12px] " + (isUser ? "bg-white/20" : "bg-slate-200/70")}>{p.slice(1, -1)}</code>;
+      return <span key={j}>{p}</span>;
+    });
+    return <div key={i} className="flex gap-1.5">{bullet && <span className={isUser ? "text-rose-200" : "text-[#E60000]"}>•</span>}<span>{parts}</span></div>;
+  });
+}
+
+export default function ChatAssistant() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [nudge, setNudge] = useState(false);
+  const [nudgeDone, setNudgeDone] = useState(false);
+  const endRef = useRef(null);
+  const taRef = useRef(null);
+
+  useEffect(() => { if (open) endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, open]);
+  useEffect(() => { const t = setTimeout(() => setNudge(true), 1400); return () => clearTimeout(t); }, []);
+
+  const openChat = () => { setOpen(true); setNudge(false); setNudgeDone(true); };
+  const dismissNudge = () => { setNudge(false); setNudgeDone(true); };
+  const grow = () => { const el = taRef.current; if (!el) return; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 96) + "px"; };
+
+  const send = async (text) => {
+    const content = (text ?? input).trim();
+    if (!content || loading) return;
+    const next = [...messages, { role: "user", content }];
+    setMessages(next); setInput(""); setError("");
+    if (taRef.current) taRef.current.style.height = "auto";
+    setLoading(true);
+    try {
+      const reply = await askAssistant(next);
+      setMessages((m) => [...m, { role: "assistant", content: reply || "I'm not sure — try rephrasing." }]);
+    } catch {
+      setError("Couldn't reach the assistant. Please try again.");
+    } finally { setLoading(false); }
+  };
+
+  const onKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+
+  if (!open) {
+    return (
+      <>
+        {nudge && !nudgeDone && (
+          <div className="vf-nudge fixed bottom-24 right-6 z-[59] w-[252px] rounded-2xl rounded-br-md border border-slate-200 bg-white p-3.5 pr-9 shadow-[0_20px_44px_-16px_rgba(15,23,42,0.36)]">
+            <button onClick={dismissNudge} className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-md text-slate-400 hover:bg-slate-100"><X size={13} /></button>
+            <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800"><Sparkles size={14} className="text-[#E60000]" /> Studio Assistant</div>
+            <div className="mt-1 text-xs leading-relaxed text-slate-500">Need a hand? I can suggest KPIs, chart types and layouts for your dashboard.</div>
+          </div>
+        )}
+        <button onClick={openChat} aria-label="Open Studio Assistant"
+          className="vf-red-grad fixed bottom-6 right-6 z-[60] flex h-14 items-center gap-2.5 rounded-[30px] pl-3.5 pr-5 font-bold text-white shadow-[0_16px_34px_-10px_rgba(230,0,0,0.6)] transition hover:-translate-y-0.5">
+          <span className="vf-ping pointer-events-none absolute inset-0 rounded-[30px] border-2 border-[#E60000]" />
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-white/20"><MessageCircle size={18} /></span>
+          <span className="hidden sm:inline">Ask Studio Assistant</span>
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <div className="vf-slide fixed bottom-6 right-6 z-[61] flex h-[min(624px,82vh)] w-[392px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_32px_70px_-22px_rgba(15,23,42,0.42)]">
+      <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3.5">
+        <div className="vf-red-grad relative grid h-9 w-9 place-items-center rounded-xl text-white">
+          <Bot size={19} /><span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+        </div>
+        <div>
+          <div className="text-sm font-bold leading-tight text-slate-800">Studio Assistant</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online</div>
+        </div>
+        <div className="ml-auto flex gap-1">
+          {messages.length > 0 && (
+            <button onClick={() => { setMessages([]); setError(""); }} className="grid h-[30px] w-[30px] place-items-center rounded-lg text-slate-500 hover:bg-slate-200/60 hover:text-slate-800"><RefreshCw size={15} /></button>
+          )}
+          <button onClick={() => setOpen(false)} className="grid h-[30px] w-[30px] place-items-center rounded-lg text-slate-500 hover:bg-slate-200/60 hover:text-slate-800"><ChevronDown size={17} /></button>
+        </div>
+      </div>
+
+      <div className="flex-1 space-y-3.5 overflow-y-auto p-4">
+        {messages.length === 0 && !loading && (
+          <div>
+            <div className="pt-3 text-center">
+              <div className="mx-auto grid h-11 w-11 place-items-center rounded-2xl border border-rose-200 bg-rose-50 text-[#E60000]"><Sparkles size={20} /></div>
+              <h4 className="mt-3 text-[15px] font-bold text-slate-800">How can I help?</h4>
+              <p className="mx-auto mt-1 max-w-[30ch] text-[12.5px] leading-relaxed text-slate-500">Ask about KPIs, chart types or how to tailor a dashboard to your audience.</p>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => send(s)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-[12.5px] text-slate-700 transition hover:border-[#E60000] hover:bg-rose-50/40 hover:text-[#E60000]">
+                  <ChevronRight size={14} className="shrink-0 opacity-60" /> {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((m, i) => {
+          const isUser = m.role === "user";
+          return (
+            <div key={i} className={"flex items-end gap-2.5 " + (isUser ? "flex-row-reverse" : "")}>
+              {!isUser && <span className="vf-red-grad grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white"><Bot size={15} /></span>}
+              <div className={"max-w-[82%] break-words rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed " + (isUser ? "vf-red-grad rounded-br-md text-white shadow-[0_8px_18px_-10px_rgba(230,0,0,0.6)]" : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800")}>
+                {renderRich(m.content, isUser)}
+              </div>
+            </div>
+          );
+        })}
+
+        {loading && (
+          <div className="flex items-end gap-2.5">
+            <span className="vf-red-grad grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white"><Bot size={15} /></span>
+            <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex gap-1">
+                <span className="vf-dot h-1.5 w-1.5 rounded-full bg-slate-300" />
+                <span className="vf-dot h-1.5 w-1.5 rounded-full bg-slate-300" style={{ animationDelay: "0.18s" }} />
+                <span className="vf-dot h-1.5 w-1.5 rounded-full bg-slate-300" style={{ animationDelay: "0.36s" }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">{error}</div>}
+        <div ref={endRef} />
+      </div>
+
+      <div className="border-t border-slate-200 bg-slate-50 p-3">
+        <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white py-1.5 pl-3 pr-1.5 focus-within:border-[#E60000] focus-within:ring-[3px] focus-within:ring-[#ffe4e4]">
+          <textarea ref={taRef} rows={1} value={input} onChange={(e) => { setInput(e.target.value); grow(); }} onKeyDown={onKey}
+            placeholder="Ask about your dashboard…" className="max-h-24 flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-relaxed text-slate-800 outline-none placeholder:text-slate-400" />
+          <button onClick={() => send()} disabled={!input.trim() || loading}
+            className="vf-red-grad grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40"><Send size={16} /></button>
+        </div>
+        <div className="mt-2 text-center text-[10.5px] text-slate-400">Enter to send · Shift + Enter for a new line</div>
+      </div>
+    </div>
+  );
+}
+
+
+############################################################################
+FILE: src/App.jsx   (REPLACE — your backend call is untouched)
+############################################################################
+
+import { useState } from "react";
+
+import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import GeneratorForm from "./components/GeneratorForm.jsx";
+import PreviewPanel from "./components/PreviewPanel.jsx";
+import ChatAssistant from "./components/ChatAssistant.jsx";
+
+const INITIAL_SESSIONS = [
+  { id: 1, title: "Q2 sales overview", market: "DE", when: "Today" },
+  { id: 2, title: "Retail footfall by store", market: "UK", when: "Today" },
+  { id: 3, title: "Churn drivers — enterprise", market: "APAC", when: "Yesterday" },
+  { id: 4, title: "Marketing spend vs pipeline", market: "US", when: "Yesterday" },
+  { id: 5, title: "Inventory turns by category", market: "DE", when: "Previous 7 days" },
+  { id: 6, title: "NPS trend, rolling 12m", market: "FR", when: "Previous 7 days" },
+];
+
+// ============================================================
+// REAL BACKEND CALL — UNTOUCHED (exactly your version)
+// FastAPI expects:  file: UploadFile = File(...)
+// ============================================================
+async function generateDashboard({ file, persona, tool, instructions }) {
+  if (!file) {
+    throw new Error("Please upload a CSV file first.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/generate-dashboard", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Dashboard generation failed.";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch {
+      // Keep default error message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+export default function App() {
+  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const [activeId, setActiveId] = useState(INITIAL_SESSIONS[0].id);
+  const [query, setQuery] = useState("");
+
+  const [persona, setPersona] = useState("Executive");
+  const [tool, setTool] = useState("power_bi");
+  const [file, setFile] = useState(null);
+  const [instructions, setInstructions] = useState("");
+
+  const [phase, setPhase] = useState("idle");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const active = sessions.find((s) => s.id === activeId) || null;
+
+  const handleNew = () => {
+    const id = Date.now();
+    setSessions((prev) => [
+      { id, title: "Untitled dashboard", market: "DE", when: "Today" },
+      ...prev,
+    ]);
+    setActiveId(id);
+    setFile(null);
+    setInstructions("");
+    setPhase("idle");
+    setResult(null);
+    setError("");
+  };
+
+  const handleGenerate = async () => {
+    setPhase("working");
+    setError("");
+    setResult(null);
+
+    try {
+      const response = await generateDashboard({ file, persona, tool, instructions });
+      console.log("Backend response:", response);
+      setResult(response);
+
+      // Update the session title with the generated dashboard title
+      if (response.dashboard_spec?.dashboard_title) {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeId
+              ? { ...s, title: response.dashboard_spec.dashboard_title }
+              : s
+          )
+        );
+      }
+
+      setPhase("done");
+    } catch (err) {
+      console.error("Dashboard generation error:", err);
+      setError(err.message || "Something went wrong.");
+      setPhase("error");
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-full bg-[#f5f7fa] text-slate-800 antialiased">
+      <Sidebar
+        sessions={sessions}
+        activeId={activeId}
+        query={query}
+        onQuery={setQuery}
+        onSelect={setActiveId}
+        onNew={handleNew}
+      />
+
+      <main className="flex min-w-0 flex-1 flex-col">
+        <TopBar title={active ? active.title : "New dashboard"} />
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-[1180px]">
+            <div className="mb-5">
+              <h1 className="text-[23px] font-extrabold tracking-tight text-slate-900">Create a dashboard</h1>
+              <p className="mt-1.5 max-w-2xl text-[14px] text-slate-500">
+                Upload a CSV file and generate an AI-powered dashboard with one or more sheets.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5">
+                <GeneratorForm
+                  persona={persona} setPersona={setPersona}
+                  tool={tool} setTool={setTool}
+                  file={file} setFile={setFile}
+                  instructions={instructions} setInstructions={setInstructions}
+                  phase={phase} onGenerate={handleGenerate}
+                />
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_44px_-26px_rgba(15,23,42,0.28)] lg:col-span-7">
+                <PreviewPanel phase={phase} result={result} error={error} tool={tool} persona={persona} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <ChatAssistant />
+    </div>
+  );
+}
+
+============================================================================
+END
+============================================================================
