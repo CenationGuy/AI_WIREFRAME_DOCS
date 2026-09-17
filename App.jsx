@@ -16,8 +16,8 @@ const INITIAL_SESSIONS = [
 ];
 
 // ============================================================
-// REAL BACKEND CALL — UNTOUCHED (exactly your version)
-// FastAPI expects:  file: UploadFile = File(...)
+// REAL BACKEND CALL
+// FastAPI expects: file: UploadFile = File(...)
 // ============================================================
 async function generateDashboard({ file, persona, tool, instructions }) {
   if (!file) {
@@ -27,19 +27,24 @@ async function generateDashboard({ file, persona, tool, instructions }) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("/api/generate-dashboard", {
-    method: "POST",
-    body: formData,
-  });
+  const response = await fetch(
+    "https://ai-wireframe-backend-124794788198.europe-west1.run.app/generate-dashboard",
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
 
   if (!response.ok) {
     let errorMessage = "Dashboard generation failed.";
+
     try {
       const errorData = await response.json();
       errorMessage = errorData.detail || errorMessage;
     } catch {
       // Keep default error message
     }
+
     throw new Error(errorMessage);
   }
 
@@ -65,10 +70,12 @@ export default function App() {
 
   const handleNew = () => {
     const id = Date.now();
+
     setSessions((prev) => [
       { id, title: "Untitled dashboard", market: "DE", when: "Today" },
       ...prev,
     ]);
+
     setActiveId(id);
     setFile(null);
     setInstructions("");
@@ -83,7 +90,13 @@ export default function App() {
     setResult(null);
 
     try {
-      const response = await generateDashboard({ file, persona, tool, instructions });
+      const response = await generateDashboard({
+        file,
+        persona,
+        tool,
+        instructions,
+      });
+
       console.log("Backend response:", response);
       setResult(response);
 
@@ -92,7 +105,10 @@ export default function App() {
         setSessions((prev) =>
           prev.map((s) =>
             s.id === activeId
-              ? { ...s, title: response.dashboard_spec.dashboard_title }
+              ? {
+                  ...s,
+                  title: response.dashboard_spec.dashboard_title,
+                }
               : s
           )
         );
@@ -123,25 +139,40 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto max-w-[1180px]">
             <div className="mb-5">
-              <h1 className="text-[23px] font-extrabold tracking-tight text-slate-900">Create a dashboard</h1>
+              <h1 className="text-[23px] font-extrabold tracking-tight text-slate-900">
+                Create a dashboard
+              </h1>
+
               <p className="mt-1.5 max-w-2xl text-[14px] text-slate-500">
-                Upload a CSV file and generate an AI-powered dashboard with one or more sheets.
+                Upload a CSV file and generate an AI-powered dashboard with
+                one or more sheets.
               </p>
             </div>
 
             <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5">
                 <GeneratorForm
-                  persona={persona} setPersona={setPersona}
-                  tool={tool} setTool={setTool}
-                  file={file} setFile={setFile}
-                  instructions={instructions} setInstructions={setInstructions}
-                  phase={phase} onGenerate={handleGenerate}
+                  persona={persona}
+                  setPersona={setPersona}
+                  tool={tool}
+                  setTool={setTool}
+                  file={file}
+                  setFile={setFile}
+                  instructions={instructions}
+                  setInstructions={setInstructions}
+                  phase={phase}
+                  onGenerate={handleGenerate}
                 />
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_44px_-26px_rgba(15,23,42,0.28)] lg:col-span-7">
-                <PreviewPanel phase={phase} result={result} error={error} tool={tool} persona={persona} />
+                <PreviewPanel
+                  phase={phase}
+                  result={result}
+                  error={error}
+                  tool={tool}
+                  persona={persona}
+                />
               </div>
             </div>
           </div>
@@ -152,6 +183,3 @@ export default function App() {
     </div>
   );
 }
-
-
-https://ai-wireframe-backend-124794788198.europe-west1.run.app
