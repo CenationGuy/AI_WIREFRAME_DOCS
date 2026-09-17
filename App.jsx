@@ -1,0 +1,157 @@
+import { useState } from "react";
+
+import Sidebar from "./components/Sidebar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import GeneratorForm from "./components/GeneratorForm.jsx";
+import PreviewPanel from "./components/PreviewPanel.jsx";
+import ChatAssistant from "./components/ChatAssistant.jsx";
+
+const INITIAL_SESSIONS = [
+  { id: 1, title: "Q2 sales overview", market: "DE", when: "Today" },
+  { id: 2, title: "Retail footfall by store", market: "UK", when: "Today" },
+  { id: 3, title: "Churn drivers — enterprise", market: "APAC", when: "Yesterday" },
+  { id: 4, title: "Marketing spend vs pipeline", market: "US", when: "Yesterday" },
+  { id: 5, title: "Inventory turns by category", market: "DE", when: "Previous 7 days" },
+  { id: 6, title: "NPS trend, rolling 12m", market: "FR", when: "Previous 7 days" },
+];
+
+// ============================================================
+// REAL BACKEND CALL — UNTOUCHED (exactly your version)
+// FastAPI expects:  file: UploadFile = File(...)
+// ============================================================
+async function generateDashboard({ file, persona, tool, instructions }) {
+  if (!file) {
+    throw new Error("Please upload a CSV file first.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/generate-dashboard", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Dashboard generation failed.";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+    } catch {
+      // Keep default error message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+export default function App() {
+  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const [activeId, setActiveId] = useState(INITIAL_SESSIONS[0].id);
+  const [query, setQuery] = useState("");
+
+  const [persona, setPersona] = useState("Executive");
+  const [tool, setTool] = useState("power_bi");
+  const [file, setFile] = useState(null);
+  const [instructions, setInstructions] = useState("");
+
+  const [phase, setPhase] = useState("idle");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const active = sessions.find((s) => s.id === activeId) || null;
+
+  const handleNew = () => {
+    const id = Date.now();
+    setSessions((prev) => [
+      { id, title: "Untitled dashboard", market: "DE", when: "Today" },
+      ...prev,
+    ]);
+    setActiveId(id);
+    setFile(null);
+    setInstructions("");
+    setPhase("idle");
+    setResult(null);
+    setError("");
+  };
+
+  const handleGenerate = async () => {
+    setPhase("working");
+    setError("");
+    setResult(null);
+
+    try {
+      const response = await generateDashboard({ file, persona, tool, instructions });
+      console.log("Backend response:", response);
+      setResult(response);
+
+      // Update the session title with the generated dashboard title
+      if (response.dashboard_spec?.dashboard_title) {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeId
+              ? { ...s, title: response.dashboard_spec.dashboard_title }
+              : s
+          )
+        );
+      }
+
+      setPhase("done");
+    } catch (err) {
+      console.error("Dashboard generation error:", err);
+      setError(err.message || "Something went wrong.");
+      setPhase("error");
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-full bg-[#f5f7fa] text-slate-800 antialiased">
+      <Sidebar
+        sessions={sessions}
+        activeId={activeId}
+        query={query}
+        onQuery={setQuery}
+        onSelect={setActiveId}
+        onNew={handleNew}
+      />
+
+      <main className="flex min-w-0 flex-1 flex-col">
+        <TopBar title={active ? active.title : "New dashboard"} />
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-[1180px]">
+            <div className="mb-5">
+              <h1 className="text-[23px] font-extrabold tracking-tight text-slate-900">Create a dashboard</h1>
+              <p className="mt-1.5 max-w-2xl text-[14px] text-slate-500">
+                Upload a CSV file and generate an AI-powered dashboard with one or more sheets.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5">
+                <GeneratorForm
+                  persona={persona} setPersona={setPersona}
+                  tool={tool} setTool={setTool}
+                  file={file} setFile={setFile}
+                  instructions={instructions} setInstructions={setInstructions}
+                  phase={phase} onGenerate={handleGenerate}
+                />
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_44px_-26px_rgba(15,23,42,0.28)] lg:col-span-7">
+                <PreviewPanel phase={phase} result={result} error={error} tool={tool} persona={persona} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <ChatAssistant />
+    </div>
+  );
+}
+
+
+https://ai-wireframe-backend-124794788198.europe-west1.run.app
