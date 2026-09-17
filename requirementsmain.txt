@@ -1,0 +1,32 @@
+# Web API
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Data Processing
+pandas
+numpy
+db-dtypes
+pyarrow
+
+# Google Cloud
+google-cloud-bigquery
+google-cloud-storage
+google-genai
+
+# LangChain
+langchain
+langchain-core
+langchain-google-genai
+langchain-text-splitters
+
+# RAG and Vector Database
+chromadb
+pypdf
+
+# Dashboard Rendering
+matplotlib
+pillow
+
+# Configuration
+python-dotenv
